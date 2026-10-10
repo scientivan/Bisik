@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+contracts
+apps/web
+apps/mcp-server
+scripts/.demo
+apps/server/data
+**/*.sqlite*
+.git

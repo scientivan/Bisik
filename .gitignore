@@ -41,3 +41,7 @@ artifacts/localnet/
 .claude/
 .gemini/
 .cursor/
+
+# demo keys and identities (local only)
+scripts/.demo/
+apps/server/data/

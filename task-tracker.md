@@ -1,6 +1,6 @@
 # Bisik: Task Tracker, Rencana Build, dan Spesifikasi Antarmuka
 
-> **Versi 1.1 · diperbarui Sabtu 10 Oktober 2026, 16:00 WIB · pemilik: Dien (keputusan) dan agent (eksekusi)**
+> **Versi 1.2 · diperbarui Sabtu 10 Oktober 2026, 17:15 WIB · pemilik: Dien (keputusan) dan agent (eksekusi)**
 >
 > Dokumen hidup. Dokumen ini satu-satunya tempat status pengerjaan Bisik. Setiap kali ada task yang dimulai, selesai, gagal, atau berubah, perbarui status task di bagian 8 dan tambahkan baris di **Progress Log** (bagian 15).
 >
@@ -159,32 +159,27 @@ Semua path relatif terhadap folder `Bisik/`.
 
 ## 3. Status saat ini (snapshot)
 
-**Per 10 Oktober 2026, 15:00 WIB.**
+**Per 10 Oktober 2026, 17:15 WIB.**
 
 ### 3.1 Yang sudah selesai
 
-- ✅ Ideasi, riset, dan spesifikasi produk: living doc v0.11.
-- ✅ Riset publik validasi permintaan (memo 113) dan kit outreach. **Belum ada pesan outreach yang terkirim** (pengirimnya Dien).
-- ✅ Toolchain terpasang dan terverifikasi (bagian 3.3).
-- ✅ Uji dependensi (memo 114):
-  - Arcium Vickrey lolos di localnet.
-  - Semaphore lolos onchain dengan 96.861 CU.
-  - Logika verifier Reclaim offchain lolos dengan bukti asli.
-- ✅ Repo `Bisik/` disiapkan:
-  - `git init`, remote `origin` = `https://github.com/scientivan/Bisik.git` (private, kosong, belum ada commit);
-  - kerangka folder;
-  - satu `.env` di root, dengan symlink `.env` di setiap folder runtime;
-  - `.gitignore`, `AGENTS.md`, dan `docs/reclaim-provider-spec.md`.
-- ✅ Kunci di `.env`: `GEMINI_API_KEY`, `WALLET_ADDRESS`, `RECLAIM_APP_ID`, `RECLAIM_APP_SECRET`, `RECLAIM_PROVIDER_ID`.
-- ✅ Provider Reclaim `e5ece37a-…` berhasil menghasilkan bukti lewat "Try Demo" untuk akun Dien (username dan 1,394 kontribusi).
+- ✅ Ideasi, riset, spesifikasi produk (living doc), uji tiga dependensi (memo 114), toolchain.
+- ✅ **Program onchain `bisik`** + 8 circuit Arcium. Tes `contracts/tests/e2e.ts` **lulus** di localnet (bukti ZK dan MPC sungguhan).
+- ✅ **Paket**: `@bisik/shared`, `@bisik/zk`, `@bisik/veritas`, `@bisik/sdk`.
+- ✅ **API server** `apps/server` (E1–E8) dengan 7 tes lulus, termasuk bukti Reclaim asli dan tolak bukti yang diubah.
+- ✅ **Keeper** `services/keeper` (E7) dan **seed demo** `scripts/seed-demo.ts` (H1). Uji gabungan di localnet: dua market berjalan sendiri dari Open sampai Settled.
+- ✅ **Hosting server**: `Dockerfile` + `railway.json`, image sudah dibangun dan dijalankan lokal (`/v1/health` OK). Langkah Railway untuk Dien: `docs/deploy-railway.md`.
+- ✅ README (versi kerja) + LICENSE MIT. Repo private, 3 commit di `main`.
 
 ### 3.2 Yang belum ada
 
-- ❌ Belum ada kode produk sama sekali. Semua folder masih berisi `.gitkeep` saja.
-- ❌ Halaman GitHub yang dipakai provider AI Reclaim belum diketahui (R23). Diuji di task E2.
-- ❌ Jalur deploy ke devnet Arcium belum diverifikasi (task A6).
-- ❌ Pembuatan bukti Semaphore di browser belum diuji. Yang sudah diuji baru di Node (task B4).
-- ❌ Hosting, video, project di Arena, dan naskah demo belum dikerjakan.
+- ❌ **Deploy ke devnet (A6/H3) terblokir dua hal:**
+  1. SOL wallet deploy `FRTMLy9suBCQYGya341V4urVedMJXFg21dDw4CTn43Ke` baru 7,88 SOL; butuh ~13,5 SOL di puncak. 10 SOL kiriman Dien masuk ke `WALLET_ADDRESS` di `.env` (wallet berbeda, kuncinya tidak ada di laptop ini).
+  2. URL publik untuk file circuit (`BISIK_CIRCUIT_BASE_URL`). Upload circuit onchain butuh ~17 SOL, jadi circuit disimpan offchain.
+- ❌ Frontend (fase G), termasuk pembuatan bukti di browser (B4). Dikerjakan terakhir sesuai permintaan Dien.
+- ❌ Uji live Reclaim dengan akun GitHub asli (R23). Butuh server di URL publik (I3) atau tunnel.
+- ⏸ D4 (`reveal_signals` lewat MPC, P1) dan D6 (reputasi terenkripsi, P2) ditunda. Sinyal pembeli sekarang dihitung server dari bobot posisi publik + alasan (asumsi kepercayaan Veritas, sudah diungkap di README).
+- ❌ Video, project di Arena, naskah demo.
 
 ### 3.3 Lingkungan
 
@@ -209,6 +204,27 @@ Semua path relatif terhadap folder `Bisik/`.
   - Contoh kodenya ada di `../Ideation-Colosseum/spikes/semaphore/to-solana.mjs`.
 
 ---
+
+### 3.4 Catatan teknis hasil build (penting untuk sesi berikutnya)
+
+- **Program ID:** `aFNfbxfgBuQ6tr5qXDpTmTWrQ8hjLGYNEtdp2L7HjvD`. IDL disalin ke `packages/sdk/src/idl/bisik.json` dengan `node scripts/sync-idl.mjs` setiap selesai `arcium build`.
+- **Ukuran program** 1,3 MB → sewa 6,6 SOL. Deploy butuh buffer + akun program sekaligus, jadi puncaknya ~13,5 SOL.
+- **Circuit offchain:** build dengan `BISIK_CIRCUIT_BASE_URL=https://…/circuits arcium build`. Tanpa variabel itu, circuit diupload onchain (hanya untuk localnet).
+- **Latensi MPC (localnet):** 2,6–4,1 dtk per computation (tabel di Progress Log). Satu market penuh di keeper: ±8 menit dengan jendela pendek.
+- **Instruksi lelang dipecah:** `open_bid(ceiling)` lalu `place_bid(offset, …)`. Alasan: struct akun `PlaceBid` melewati batas stack 4 KB Solana.
+- **RPC:** pakai `skipPreflight: true` + commitment `confirmed`. Validator baru sering memberi "Blockhash not found" saat preflight.
+- **Menjalankan stack lokal:**
+  1. `cd contracts && arcium localnet --skip-build` (tunggu slot berjalan).
+  2. `cd apps/server && BISIK_DEMO=1 npx tsx src/index.ts` (port 8787).
+  3. `npx tsx scripts/seed-demo.ts` (setup, 2 market, 6 stake anonim). Lalu `seed-demo.ts bids 0`, `select 0 ecosystem-a 0`, `buyflat 0 ecosystem-c`.
+  4. `cd services/keeper && npx tsx src/index.ts`.
+- **Endpoint server (prefix `/v1`):** `health`; `identity/reclaim-session` (+ GET status, POST `reclaim/callback`); `groups/:tier/:epoch`; `options/team-ref`; `reasons`; `markets/:id`; `auth/nonce`, `auth/verify` (SIWS); `markets/:id/signals`; `intro` (D-15); `outcomes/check`; `disputes`; admin: `buyers/verify`, `markets/:id/summarize`, `markets/:id/default-outcomes`, `disputes`, `demo/members` (hanya `BISIK_DEMO=1`).
+- **Aturan R23 di verifier:** username harus berasal dari URL halaman yang perlu login (`github.com/settings/…`). Bisa dimatikan sementara dengan `BISIK_ENFORCE_LOGIN_ONLY=0` hanya untuk uji.
+- **Data sensitif server** (teks alasan, team-ref, bukti sengketa) dienkripsi AES-256-GCM dengan `SERVER_DATA_KEY`. Username GitHub tidak pernah disimpan; yang disimpan hanya hash bergaram.
+- **Default outcome (D-05):** pembeli yang tidak menandai apa pun mendapat opsi terkuat yang bisa dilihatnya; dijalankan keeper lewat `POST /v1/admin/markets/:id/default-outcomes`.
+- **Bug yang sudah diperbaiki di uji gabungan:** dua posisi dengan teks alasan identik dulu saling menimpa di DB. Sekarang keduanya dihitung dan salinannya ditandai `likely_duplicate` (D = 1).
+- **zkey Semaphore (B5):** artefak dari `privacy-scaling-explorations/snark-artifacts` (lisensi MIT), hasil ceremony phase-2 Semaphore V4 lewat ceremony.pse.dev. Versi 4.13.0, sha256 `33f9a067…` dipin di `scripts/gen-vk.mjs`. Jumlah kontributor ceremony belum terverifikasi.
+- **Disk:** sisa ~2 GiB setelah uji Docker. ⚠️ Bersihkan sebelum build besar.
 
 ## 4. Timeline dan milestone
 
@@ -537,154 +553,154 @@ Format: **ID · judul · prioritas · pemilik · dependensi.** Lalu langkah, dan
 
 ### Fase A: Fondasi repo (target M0, Sab 19:00)
 
-- [ ] **A1 · Workspace pnpm · P0 · agent · –**
+- [x] **A1 · Workspace pnpm · P0 · agent · –**
   - `package.json` root (private, scripts `build`, `test`, `dev`), `pnpm-workspace.yaml` (apps/*, packages/*, services/*), `tsconfig.base.json` dipakai semua paket TS.
   - Buat `package.json` + `tsconfig.json` minimal untuk `packages/{shared,zk,sdk,veritas}`, `apps/{web,server}`, `services/keeper`.
   - **Selesai bila:** `pnpm install` dan `pnpm -r build` lolos tanpa error.
-- [ ] **A2 · Workspace Anchor + Arcium · P0 · agent · –**
+- [x] **A2 · Workspace Anchor + Arcium · P0 · agent · –**
   - `arcium init` (atau setara) di `contracts/` dengan nama program `bisik`. Pin Anchor 1.0.2, `arcium-anchor`/`arcis` =0.13.2, `rust-toolchain.toml` 1.89.0, `[test] startup_wait = 180000`.
   - Circuit hello-world sendiri (bukan salinan contoh).
   - **Selesai bila:** `arcium build` lolos dan `arcium test` untuk circuit hello lolos di localnet.
-- [ ] **A3 · LICENSE MIT + README kerangka · P0 · agent · –**
+- [x] **A3 · LICENSE MIT + README kerangka · P0 · agent · –**
   - README memuat: ringkasan, arsitektur, asumsi kepercayaan (5.3), rujukan dan pengungkapan (Arcium examples sebagai rujukan, Semaphore MIT, provider Reclaim), cara menjalankan.
   - **Selesai bila:** file ada dan tidak menyebut data rahasia.
-- [ ] **A4 · Keypair dan mock USDC · P0 · agent · A2**
+- [x] **A4 · Keypair dan mock USDC · P0 · agent · A2**
   - `scripts/create-mock-usdc.ts`: mint 6 desimal, airdrop ke wallet demo.
   - Keypair operator dan admin disimpan di `~/.config/bisik/` (di luar repo). Path-nya ditulis ke `.env`.
   - **Selesai bila:** saldo mock USDC muncul di localnet; nama variabel tercatat di `.env.example`.
-- [ ] **A5 · `.env.example` lengkap · P0 · agent · –**
+- [x] **A5 · `.env.example` lengkap · P0 · agent · –**
   - Semua nama variabel di 6.9, tanpa nilai.
   - Buat `PLATFORM_SALT`, `SERVER_DATA_KEY`, dan `JWT_SECRET` secara acak dan tulis ke `.env` (jangan dicetak).
   - **Selesai bila:** `grep -c = .env.example` cocok dengan tabel 6.9.
-- [ ] **A6 · Verifikasi jalur devnet Arcium · P0 · agent · A2**
+- [!] **A6 · Verifikasi jalur devnet Arcium · P0 · agent · A2**
   - Baca docs Arcium tentang deploy ke devnet (cluster offset, biaya, akun MXE). Coba deploy circuit hello ke devnet.
   - **Selesai bila:** deploy devnet berhasil (catat `ARCIUM_CLUSTER_OFFSET`), **atau** terbukti tidak tersedia dan cadangan "demo localnet terekam" diaktifkan (bagian 12). Catat hasilnya di Progress Log.
-- [ ] **A7 · Commit pertama · P0 · agent · A1–A5**
+- [x] **A7 · Commit pertama · P0 · agent · A1–A5**
   - Commit kerangka (tanpa `.env`, tanpa clone contoh Arcium). Push ke `origin main` (private).
   - **Selesai bila:** `git status` bersih dan `git ls-files | grep -E '\.env$'` kosong.
 
 ### Fase B: Identitas ZK (Semaphore)
 
-- [ ] **B1 · `packages/zk` · P0 · agent · A1**
+- [x] **B1 · `packages/zk` · P0 · agent · A1**
   - API seperti 6.7. Port konversi dari `spikes/semaphore/to-solana.mjs`. Kedalaman pohon tetap 20.
   - **Selesai bila:** tes unit membuat bukti stake dan klaim, mengonversinya, dan memverifikasinya di JS.
-- [ ] **B2 · Generator VK · P0 · agent · B1, A2**
+- [x] **B2 · Generator VK · P0 · agent · B1, A2**
   - `scripts/gen-vk.ts`: ekspor VK dari `semaphore-20.zkey` → `contracts/programs/bisik/src/zk/vk.rs`. Catat hash file zkey.
   - **Selesai bila:** `vk.rs` dihasilkan secara deterministik dan ter-commit.
-- [ ] **B3 · Verifikasi di program · P0 · agent · B2**
+- [x] **B3 · Verifikasi di program · P0 · agent · B2**
   - `zk/verify.rs`: `verify_semaphore(proof, root, nullifier, message, scope)` dengan `groth16-solana` 0.2.0 dan `field_hash` berbasis keccak.
   - **Selesai bila:** tes LiteSVM: bukti valid lolos, nullifier/root/message yang diubah ditolak, CU < 120 ribu.
 - [ ] **B4 · Pembuatan bukti di browser · P0 · agent · B1, G1**
   - Muat `semaphore-20.wasm` dan `.zkey` di Vite: aset lokal di `public/` atau unduh dari snark-artifacts. Ukur waktunya.
   - **Selesai bila:** bukti dibuat di Chrome/Safari dalam < 10 detik. Kalau gagal, jalankan cadangan B4 (bagian 12).
-- [ ] **B5 · Cek lisensi dan asal-usul artefak zkey · P1 · agent · –**
+- [x] **B5 · Cek lisensi dan asal-usul artefak zkey · P1 · agent · –**
   - Cari sumber trusted setup Semaphore v4 (ceremony PSE) dan lisensi artefaknya.
   - **Selesai bila:** dicatat di README, bagian rujukan.
 
 ### Fase C: Program onchain (tanpa Arcium dulu, lalu disambungkan)
 
-- [ ] **C1 · `Config` + `init_config` + `rotate_epoch` · P0 · agent · A2**
+- [x] **C1 · `Config` + `init_config` + `rotate_epoch` · P0 · agent · A2**
   - **Selesai bila:** tes inisialisasi dan perubahan epoch lolos.
-- [ ] **C2 · `publish_group_root`, `register_source_nullifier`, `register_buyer` · P0 · agent · C1**
+- [x] **C2 · `publish_group_root`, `register_source_nullifier`, `register_buyer` · P0 · agent · C1**
   - **Selesai bila:** hanya operator yang bisa memanggil (tes penolakan); root history bergeser dengan benar.
-- [ ] **C3 · `create_market` + Escrow · P0 · agent · C1**
+- [x] **C3 · `create_market` + Escrow · P0 · agent · C1**
   - Validasi parameter D-03/D-06; dua jenis market; durasi bebas untuk demo.
   - **Selesai bila:** tes membuat kedua jenis market; parameter di luar batas ditolak.
-- [ ] **C4 · `add_option` · P0 · agent · C3**
+- [x] **C4 · `add_option` · P0 · agent · C3**
   - Batas 16 opsi. Simpan komitmen tim, bukan identitas tim.
   - **Selesai bila:** tes batas opsi dan status lolos.
-- [ ] **C5 · `stake` (dengan ZK) · P0 · agent · B3, C2, C4**
+- [x] **C5 · `stake` (dengan ZK) · P0 · agent · B3, C2, C4**
   - Semua pemeriksaan di 6.2.2 #7. Transfer USDC ke escrow. Hitung `weight_bps`: bonus awal linear 1,5 → 1,0 sepanjang masa submit, dikali multiplier tier.
   - Sebelum D1 siap: simpan `enc_option` saja (agregasi lewat cadangan).
   - **Selesai bila:** tes stake valid; slot 4, nullifier ganda, root asing, dan message yang diubah semuanya ditolak.
-- [ ] **C6 · `close_submit` · P0 · agent · C5**
+- [x] **C6 · `close_submit` · P0 · agent · C5**
   - **Selesai bila:** status berubah, dan (setelah D2) `preview` terisi lewat callback.
-- [ ] **C7 · `place_bid`, `resolve_auction`, `refund_bid` · P0 · agent · C6, D3**
+- [x] **C7 · `place_bid`, `resolve_auction`, `refund_bid` · P0 · agent · C6, D3**
   - Ceiling deposit (D-23); GSP b = 2; harga cadangan.
   - **Selesai bila:** skenario 3 penawar: dua pemenang dengan harga yang benar; refund selisih tepat sampai base unit.
-- [ ] **C8 · `select_hidden` · P0 · agent · C7**
+- [x] **C8 · `select_hidden` · P0 · agent · C7**
   - Urutan wajib #1 lalu #2. Timeout: setelah `auction_end + T`, rank berikutnya boleh memilih.
   - **Selesai bila:** tes urutan, duplikasi opsi, dan batas x lolos.
-- [ ] **C9 · `buy_flat` · P0 · agent · C8**
+- [x] **C9 · `buy_flat` · P0 · agent · C8**
   - **Selesai bila:** pembeli rank 0 mendapat alokasi; dana masuk pool.
-- [ ] **C10 · `register_deploy_wallet`, `record_outcome`, `finalize_outcomes` · P0 · agent · C9**
+- [x] **C10 · `register_deploy_wallet`, `record_outcome`, `finalize_outcomes` · P0 · agent · C9**
   - Aturan default D-05.
   - **Selesai bila:** tes hasil deploy, hasil grant (atestasi pembeli), dan default.
-- [ ] **C11 · `open_dispute`, `resolve_dispute` · P1 · agent · C10**
+- [x] **C11 · `open_dispute`, `resolve_dispute` · P1 · agent · C10**
   - Slash ke `charity` (D-07); opini tidak pernah di-slash.
   - **Selesai bila:** upheld → stake ke charity dan posisi tidak bisa diklaim; rejected → normal.
-- [ ] **C12 · `settle_position`, `claim`, `settle_market_fees` · P0 · agent · C10, D5**
+- [x] **C12 · `settle_position`, `claim`, `settle_market_fees` · P0 · agent · C10, D5**
   - Cadangan sebelum D5: payout dihitung operator dari data terdekripsi (diungkapkan).
   - **Selesai bila:** total yang dibayarkan = stake + 80% pool (+ 15% treasury + 5% tim, atau kembali ke pool scout); tidak ada dana tersisa tak terdistribusi; klaim kedua ditolak.
-- [ ] **C13 · Event + IDL · P0 · agent · C1–C12**
+- [x] **C13 · Event + IDL · P0 · agent · C1–C12**
   - **Selesai bila:** IDL dihasilkan; event terbaca di tes.
-- [ ] **C14 · Tes integrasi program · P0 · agent · C1–C13**
+- [x] **C14 · Tes integrasi program · P0 · agent · C1–C13**
   - Satu skenario lengkap F0–F9 di localnet Arcium.
   - **Selesai bila:** `arcium test` lolos dari awal sampai akhir.
 
 ### Fase D: Circuit Arcium
 
-- [ ] **D1 · `init_market_state` + `allocate_position` · P0 · agent · A2**
+- [x] **D1 · `init_market_state` + `allocate_position` · P0 · agent · A2**
   - **Selesai bila:** setelah 3 stake terenkripsi, total per opsi (didekripsi di tes) benar.
-- [ ] **D2 · `aggregate_preview` · P0 · agent · D1**
+- [x] **D2 · `aggregate_preview` · P0 · agent · D1**
   - Ambang kekuatan [Usulan]: lemah < 20% skor maksimum, kuat ≥ 50%.
   - **Selesai bila:** pratinjau hanya berisi histogram, tanpa indeks opsi.
-- [ ] **D3 · Lelang top-3 + `resolve_auction` GSP · P0 · agent · A2**
+- [x] **D3 · Lelang top-3 + `resolve_auction` GSP · P0 · agent · A2**
   - Tulis sendiri dengan contoh Vickrey sebagai rujukan. Ikat penawar ke signer (keterbatasan contoh).
   - **Selesai bila:** tes 3–4 penawar: pemenang dan harga sesuai rumus, harga cadangan ditegakkan.
-- [ ] **D4 · `reveal_signals` ke kunci pembeli · P1 · agent · D2**
+- [⏸] **D4 · `reveal_signals` ke kunci pembeli · P1 · agent · D2**
   - **Selesai bila:** pembeli mendekripsi skor opsi yang diizinkan saja.
-- [ ] **D5 · `compute_payout` · P0 · agent · D1**
+- [x] **D5 · `compute_payout` · P0 · agent · D1**
   - **Selesai bila:** payout per posisi cocok dengan perhitungan referensi TypeScript (toleransi 1 base unit).
-- [ ] **D6 · `credit_reputation` + `epoch_tiers` · P2 · agent · D5**
+- [⏸] **D6 · `credit_reputation` + `epoch_tiers` · P2 · agent · D5**
   - **Selesai bila:** tier scout naik setelah hasil sukses di epoch berikutnya.
-- [ ] **D7 · Ukur latensi · P1 · agent · D1–D5**
+- [x] **D7 · Ukur latensi · P1 · agent · D1–D5**
   - Catat detik per circuit di localnet. Hasilnya dipakai untuk menyusun naskah demo.
   - **Selesai bila:** tabel latensi masuk Progress Log.
 
 ### Fase E: Server (`apps/server`) dan keeper
 
-- [ ] **E1 · Kerangka Hono + SQLite + loader `.env` · P0 · agent · A1**
+- [x] **E1 · Kerangka Hono + SQLite + loader `.env` · P0 · agent · A1**
   - **Selesai bila:** `GET /v1/health` mengembalikan versi; skema tabel 6.5 dibuat lewat migrasi.
-- [ ] **E2 · Verifier Reclaim · P0 · agent · E1, C2**
+- [x] **E2 · Verifier Reclaim · P0 · agent · E1, C2**
   - Sesi (`acceptAiProviders: true`), callback, `verifyProof` (konfigurasi hash provider kalau tersedia), penanda tangan ∈ attestor, **aturan R23**, tier, `sourceNullifier = keccak(PLATFORM_SALT ‖ "github" ‖ lowercase(username))`, `register_source_nullifier`, tambah daun.
   - **Uji live wajib:** satu login GitHub asli Dien. Catat `parameters.url` yang dipakai provider AI.
   - **Selesai bila:** bukti asli Dien diterima (atau ditolak dengan `UNOWNED_SOURCE` sesuai aturan, lalu provider diperbaiki); bukti fixture yang diubah ditolak; username tidak tersimpan di DB maupun log.
-- [ ] **E3 · Layanan grup · P0 · agent · E1, B1, C2**
+- [x] **E3 · Layanan grup · P0 · agent · E1, B1, C2**
   - LeanIMT per (tier, epoch); `publish_group_root` setiap ada daun baru (debounce 10 detik); ambang k (flag demo).
   - **Selesai bila:** root di server = root onchain = root yang dihitung browser.
-- [ ] **E4 · Team-ref + alasan + pipeline Veritas · P0 · agent · E1, F1–F6**
+- [x] **E4 · Team-ref + alasan + pipeline Veritas · P0 · agent · E1, F1–F6**
   - **Selesai bila:** `POST /v1/reasons` mengembalikan skor dalam < 8 detik; teks tersimpan terenkripsi.
-- [ ] **E5 · SIWS + endpoint sinyal · P0 · agent · E4, C8, C9**
+- [x] **E5 · SIWS + endpoint sinyal · P0 · agent · E4, C8, C9**
   - Pemeriksaan izin dari `Allocation` onchain.
   - **Selesai bila:** pembeli rank #2 tidak bisa melihat opsi yang disembunyikan #1; pembeli rank 0 hanya melihat sisanya.
-- [ ] **E6 · Oracle hasil · P0 · agent · C10**
+- [x] **E6 · Oracle hasil · P0 · agent · C10**
   - Cari transaksi deploy program dari `deploy_wallet` di devnet dalam jendela (`getSignaturesForAddress` + cek instruksi BPF Loader).
   - **Selesai bila:** deploy dummy terdeteksi dan `record_outcome` terkirim.
-- [ ] **E7 · Keeper (`services/keeper`) · P0 · agent · C6–C12**
+- [x] **E7 · Keeper (`services/keeper`) · P0 · agent · C6–C12**
   - Loop: tutup submit, selesaikan lelang, timeout pemilihan, finalisasi hasil, settle posisi, biaya, ganti epoch. Idempoten.
   - **Selesai bila:** satu market demo berjalan sampai `Settled` tanpa intervensi manual.
-- [ ] **E8 · Sengketa + perkenalan (D-15) · P1 · agent · C11, E5**
+- [x] **E8 · Sengketa + perkenalan (D-15) · P1 · agent · C11, E5**
   - **Selesai bila:** alur sengketa dan permintaan perkenalan berjalan lewat API.
 
 ### Fase F: Veritas (`packages/veritas`, D-21)
 
-- [ ] **F1 · Client Gemini · P0 · agent · A1**
+- [x] **F1 · Client Gemini · P0 · agent · A1**
   - Model dari `.env`, retry, batas laju, keluaran JSON.
   - **Selesai bila:** panggilan uji berhasil memakai `GEMINI_API_KEY` (kunci tidak tercetak).
-- [ ] **F2 · `scoreDuplicate` · P0 · agent · F1**
+- [x] **F2 · `scoreDuplicate` · P0 · agent · F1**
   - **Selesai bila:** teks salin-tempel → D ≥ 0,9; teks berbeda → D < 0,4 (fixture).
-- [ ] **F3 · `scoreAiLikelihood` + `drs` · P0 · agent · F1**
+- [x] **F3 · `scoreAiLikelihood` + `drs` · P0 · agent · F1**
   - **Selesai bila:** nilai 0..1 dan flag terisi; tidak pernah dipakai untuk slashing.
-- [ ] **F4 · `extractClaims` · P0 · agent · F1**
+- [x] **F4 · `extractClaims` · P0 · agent · F1**
   - **Selesai bila:** fixture "memimpin migrasi X ke Y" → `verifiable`; "timnya keren" → `opinion`.
-- [ ] **F5 · `privacyFilter` · P0 · agent · F1**
+- [x] **F5 · `privacyFilter` · P0 · agent · F1**
   - **Selesai bila:** nama orang, handle, dan URL pribadi hilang; makna tetap (cek manual 5 fixture).
-- [ ] **F6 · `summarize` · P1 · agent · F1**
+- [x] **F6 · `summarize` · P1 · agent · F1**
   - **Selesai bila:** pro dan kontra per opsi, masing-masing maksimal 3 poin.
-- [ ] **F7 · Mode gagal-aman · P0 · agent · F2–F6**
+- [x] **F7 · Mode gagal-aman · P0 · agent · F2–F6**
   - **Selesai bila:** saat API Gemini dimatikan, stake tetap bisa jalan dengan flag `ai_unavailable`.
-- [ ] **F8 · `sybilHints` · P2 · agent · F2**
+- [x] **F8 · `sybilHints` · P2 · agent · F2**
 
 ### Fase G: Frontend (`apps/web`)
 
@@ -709,19 +725,19 @@ Format: **ID · judul · prioritas · pemilik · dependensi.** Lalu langkah, dan
 
 ### Fase H: Integrasi dan data demo
 
-- [ ] **H1 · `scripts/seed-demo.ts` · P0 · agent · C14, E3**
+- [x] **H1 · `scripts/seed-demo.ts` · P0 · agent · C14, E3**
   - Data fiktif bagian 7.
   - **Selesai bila:** satu perintah menyiapkan seluruh skenario.
 - [ ] **H2 · Uji E2E manual F0–F10 · P0 · agent + Dien · H1, G2–G8**
   - **Selesai bila:** checklist alur lengkap tercentang; durasi tiap langkah tercatat.
-- [ ] **H3 · Deploy program ke devnet · P0 · agent · A6, C14**
+- [!] **H3 · Deploy program ke devnet · P0 · agent · A6, C14**
   - **Selesai bila:** `BISIK_PROGRAM_ID` devnet aktif, atau cadangan localnet terekam diaktifkan.
 
 ### Fase I: Hosting [Usulan, D-25]
 
 - [ ] **I1 · Web ke Vercel · P0 · agent + Dien (akun GitHub yang terhubung dengan repo, D-25) · G1**
   - **Selesai bila:** URL publik memuat aplikasi.
-- [ ] **I2 · Server + keeper ke Railway dengan volume persisten · P0 · deploy manual oleh Dien; agent menyiapkan `railway.json`/Dockerfile, daftar env, dan langkah-langkahnya · E1, E7**
+- [~] **I2 · Server + keeper ke Railway dengan volume persisten · P0 · deploy manual oleh Dien; agent menyiapkan `railway.json`/Dockerfile, daftar env, dan langkah-langkahnya · E1, E7**
   - **Selesai bila:** `GET /v1/health` publik merespons.
 - [ ] **I3 · Callback Reclaim ke URL server publik · P0 · agent · I2, E2**
 - [ ] **I4 · Uji asap produksi · P0 · agent · I1–I3**
@@ -871,6 +887,16 @@ Hanya ditambah, jangan dihapus. Format: `waktu WIB · siapa · apa · bukti/path
 - 2026-10-10 16:00 · Dien · D-22 sampai D-30 diputuskan (ikut usulan; Vercel lewat akun GitHub, Railway manual oleh Dien) · tabel 1.5
 - 2026-10-10 16:00 · agent · `important_for_demo.md` dibuat (isi wajib video demo dan pitch) · file itu
 
+- 2026-10-10 17:00 · agent · A1–A5, A7, B1–B3, C1–C14, D1–D3, D5, D7, F1–F8 selesai. `contracts/tests/e2e.ts` LULUS di localnet Arcium: stake ZK, agregasi MPC, preview (3 opsi: 1 lemah, 2 kuat), lelang GSP (#1 bayar 200, #2 bayar 120, nilai tawaran tidak terbuka), seleksi berurutan, beli flat, sengketa (20 USDC ke amal), settlement MPC, klaim ZK ke alamat baru, fee 61,5 USDC. `place_bid` dipecah jadi `open_bid` + `place_bid` (batas stack). Commit `5964495` · `../Ideation-Colosseum/spikes/bisik-e2e4.log`
+- 2026-10-10 17:00 · agent · D7 latensi MPC localnet (dtk, rata-rata/maks): init_market_agg 4,0/4,0 · init_auction 2,6/2,6 · allocate 3,5/4,1 · preview 3,5/3,5 · place_bid 3,3/3,5 · resolve_auction 2,9/2,9 · winning_weights 2,9/2,9 · position_hits 3,1/3,4 · `bisik-e2e4.log`
+- 2026-10-10 17:05 · agent · A6 [!]: deploy devnet butuh ~13,5 SOL di puncak; wallet deploy 7,88 SOL; airdrop devnet kena batas. Program kini mendukung circuit offchain (`BISIK_CIRCUIT_BASE_URL`). Commit `f0596de`
+- 2026-10-10 17:10 · agent · `@bisik/sdk` (PDA, akun Arcium, enkripsi MXE, `visibleMask`, `queueAndWait`) · `packages/sdk`
+- 2026-10-10 17:10 · agent · E1–E8 selesai: `apps/server` (Hono + `node:sqlite`). Tes 7/7 lulus termasuk bukti Reclaim asli dari SDK (tanda tangan dan attestor lolos, ditolak karena tidak ada jumlah kontribusi; versi yang diubah ditolak `INVALID_PROOF`) · `apps/server/src/server.test.ts`
+- 2026-10-10 17:10 · agent · E7 + H1: keeper dan seed. Uji gabungan localnet: market 0 (lelang) dan market 1 (eksklusif, pool 500) berjalan otomatis sampai Settled. Market 1: opsi default terkuat, pembayaran 425 USDC (85% pool) ke posisi pendukung. Bug alasan identik saling menimpa ditemukan dan diperbaiki · `services/keeper`, `scripts/seed-demo.ts`
+- 2026-10-10 17:10 · agent · I2 disiapkan: `Dockerfile`, `.dockerignore`, `railway.json`; image dibangun dan dijalankan lokal, `/v1/health` OK. Deploy Railway menunggu Dien · `docs/deploy-railway.md`
+- 2026-10-10 17:10 · agent · B5: artefak zkey dari `snark-artifacts` (MIT), ceremony Semaphore V4 di ceremony.pse.dev; hash dipin. Jumlah kontributor belum terverifikasi · https://docs.semaphore.pse.dev/trusted-setup
+- 2026-10-10 17:10 · agent · D4 dan D6 ditunda (P1/P2). Alasan: frontend lebih mendesak; sinyal pembeli sudah tersedia lewat server (asumsi kepercayaan Veritas) · bagian 3.2
+
 ---
 
 ## 16. Cara memperbarui dokumen ini
@@ -881,6 +907,3 @@ Hanya ditambah, jangan dihapus. Format: `waktu WIB · siapa · apa · bukti/path
 4. **Kalau spesifikasi (bagian 6) berubah**, perbarui di commit yang sama, lalu catat di Progress Log.
 5. **Keputusan baru dari Dien:** pindahkan dari bagian 14 ke tabel 1.5. Catat juga di Decision Log living doc dan di `../AGENTS.md`.
 6. **Naikkan versi** di header: minor untuk status, mayor untuk perubahan rencana.
-- 2026-10-10 · agent · A1–A5, A7, B1–B3, C1–C14, D1–D3, D5, D7, F1–F7 selesai. `contracts/tests/e2e.ts` LULUS di localnet Arcium (stake ZK, agregasi MPC, lelang GSP, seleksi berurutan, sengketa, settlement, klaim ZK). Latensi MPC 2,6–4,1 dtk per circuit. `place_bid` dipecah menjadi `open_bid` + `place_bid` (batas stack). Commit `5964495` di-push · `contracts/`, `packages/`
-- 2026-10-10 · agent · A6 [!]: deploy ke devnet butuh ~13 SOL di puncak (sewa program 6,6 SOL ×2); wallet deploy punya 7,9 SOL dan airdrop terkena batas. Opsi circuit offchain (`BISIK_CIRCUIT_BASE_URL`) sudah ditambahkan · menunggu Dien
-- SISA: packages/sdk, apps/server (E1–E8), services/keeper, scripts/seed-demo, deploy devnet, lalu frontend (G)

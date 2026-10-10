@@ -1,0 +1,26 @@
+{
+  "name": "@bisik/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc -p . --noEmit",
+    "typecheck": "tsc -p . --noEmit",
+    "test": "tsx --test src/*.test.ts"
+  },
+  "dependencies": {
+    "@bisik/sdk": "workspace:*",
+    "@bisik/shared": "workspace:*",
+    "@bisik/veritas": "workspace:*",
+    "@bisik/zk": "workspace:*",
+    "@hono/node-server": "^1.13.7",
+    "@noble/curves": "^1.7.0",
+    "@reclaimprotocol/js-sdk": "5.8.2",
+    "@solana/web3.js": "^1.98.0",
+    "@solana/spl-token": "^0.4.9",
+    "dotenv": "^16.4.7",
+    "hono": "^4.6.14"
+  }
+}

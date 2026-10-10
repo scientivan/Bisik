@@ -1,0 +1,17 @@
+{
+  "name": "@bisik/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "scripts": { "build": "tsc -p . && mkdir -p dist/idl && cp src/idl/bisik.json dist/idl/bisik.json", "typecheck": "tsc -p . --noEmit" },
+  "dependencies": {
+    "@anchor-lang/core": "^1.0.2",
+    "@arcium-hq/client": "0.13.2",
+    "@solana/web3.js": "^1.98.0",
+    "@solana/spl-token": "^0.4.9",
+    "@bisik/shared": "workspace:*"
+  }
+}
