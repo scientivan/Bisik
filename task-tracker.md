@@ -1,6 +1,6 @@
 # Bisik: Task Tracker, Rencana Build, dan Spesifikasi Antarmuka
 
-> **Versi 1.2 · diperbarui Sabtu 10 Oktober 2026, 17:15 WIB · pemilik: Dien (keputusan) dan agent (eksekusi)**
+> **Versi 1.3 · diperbarui Sabtu 10 Oktober 2026, 18:30 WIB · pemilik: Dien (keputusan) dan agent (eksekusi)**
 >
 > Dokumen hidup. Dokumen ini satu-satunya tempat status pengerjaan Bisik. Setiap kali ada task yang dimulai, selesai, gagal, atau berubah, perbarui status task di bagian 8 dan tambahkan baris di **Progress Log** (bagian 15).
 >
@@ -159,7 +159,7 @@ Semua path relatif terhadap folder `Bisik/`.
 
 ## 3. Status saat ini (snapshot)
 
-**Per 10 Oktober 2026, 17:15 WIB.**
+**Per 10 Oktober 2026, 18:30 WIB.**
 
 ### 3.1 Yang sudah selesai
 
@@ -173,9 +173,7 @@ Semua path relatif terhadap folder `Bisik/`.
 
 ### 3.2 Yang belum ada
 
-- ❌ **Deploy ke devnet (A6/H3) terblokir dua hal:**
-  1. SOL wallet deploy `FRTMLy9suBCQYGya341V4urVedMJXFg21dDw4CTn43Ke` baru 7,88 SOL; butuh ~13,5 SOL di puncak. 10 SOL kiriman Dien masuk ke `WALLET_ADDRESS` di `.env` (wallet berbeda, kuncinya tidak ada di laptop ini).
-  2. URL publik untuk file circuit (`BISIK_CIRCUIT_BASE_URL`). Upload circuit onchain butuh ~17 SOL, jadi circuit disimpan offchain.
+- ✅ **Devnet live (A6/H3):** program `aFNfbxfgBuQ6tr5qXDpTmTWrQ8hjLGYNEtdp2L7HjvD` + MXE di cluster Arcium **456**, Arcium **0.15.0**. Circuit di repo publik `scientivan/bisik-circuits` (URL raw dipin ke commit `a86729c`). Seed demo devnet sukses (mint mock USDC `F1uGxYkPfypwni9tfLDSCanFX5dN1nDhPSz7izFEWR37`).
 - ❌ Frontend (fase G), termasuk pembuatan bukti di browser (B4). Dikerjakan terakhir sesuai permintaan Dien.
 - ❌ Uji live Reclaim dengan akun GitHub asli (R23). Butuh server di URL publik (I3) atau tunnel.
 - ⏸ D4 (`reveal_signals` lewat MPC, P1) dan D6 (reputasi terenkripsi, P2) ditunda. Sinyal pembeli sekarang dihitung server dari bobot posisi publik + alasan (asumsi kepercayaan Veritas, sudah diungkap di README).
@@ -209,6 +207,9 @@ Semua path relatif terhadap folder `Bisik/`.
 
 - **Program ID:** `aFNfbxfgBuQ6tr5qXDpTmTWrQ8hjLGYNEtdp2L7HjvD`. IDL disalin ke `packages/sdk/src/idl/bisik.json` dengan `node scripts/sync-idl.mjs` setiap selesai `arcium build`.
 - **Ukuran program** 1,3 MB → sewa 6,6 SOL. Deploy butuh buffer + akun program sekaligus, jadi puncaknya ~13,5 SOL.
+- **Arcium 0.15.0 (upgrade 10 Okt, keputusan Dien):** devnet menjalankan 0.15; CLI 0.13.2 gagal di `QueueKeyRecoveryInit` (`AccountOwnedByWrongProgram`, akun `mxe_program` dihapus sejak 0.14.1). Upgrade tanpa perubahan kode; e2e lulus lagi.
+- **Deploy devnet yang andal:** RPC publik membuang transaksi tulis (`Max retries exceeded`), jadi tulis buffer sendiri lalu deploy/upgrade: `solana program write-buffer target/deploy/bisik.so --buffer .deploy/buffer.json -u devnet --with-compute-unit-price 20000 --max-sign-attempts 30`, lalu `solana program upgrade <buffer> <program-id> -u devnet`, lalu `arcium deploy … --skip-deploy --resume`. Kalau program membesar: `solana program extend <id> <bytes>`. Buffer gagal: `solana program close --buffers` untuk mengambil SOL kembali.
+- **URL circuit sekarang argumen instruksi** `init_<circuit>_comp_def(circuit_base_url)`, bukan variabel build. String kosong = upload onchain (localnet). Seed membaca `BISIK_CIRCUIT_BASE_URL` dari `.env`.
 - **Circuit offchain:** build dengan `BISIK_CIRCUIT_BASE_URL=https://…/circuits arcium build`. Tanpa variabel itu, circuit diupload onchain (hanya untuk localnet).
 - **Latensi MPC (localnet):** 2,6–4,1 dtk per computation (tabel di Progress Log). Satu market penuh di keeper: ±8 menit dengan jendela pendek.
 - **Instruksi lelang dipecah:** `open_bid(ceiling)` lalu `place_bid(offset, …)`. Alasan: struct akun `PlaceBid` melewati batas stack 4 KB Solana.
@@ -224,7 +225,8 @@ Semua path relatif terhadap folder `Bisik/`.
 - **Default outcome (D-05):** pembeli yang tidak menandai apa pun mendapat opsi terkuat yang bisa dilihatnya; dijalankan keeper lewat `POST /v1/admin/markets/:id/default-outcomes`.
 - **Bug yang sudah diperbaiki di uji gabungan:** dua posisi dengan teks alasan identik dulu saling menimpa di DB. Sekarang keduanya dihitung dan salinannya ditandai `likely_duplicate` (D = 1).
 - **zkey Semaphore (B5):** artefak dari `privacy-scaling-explorations/snark-artifacts` (lisensi MIT), hasil ceremony phase-2 Semaphore V4 lewat ceremony.pse.dev. Versi 4.13.0, sha256 `33f9a067…` dipin di `scripts/gen-vk.mjs`. Jumlah kontributor ceremony belum terverifikasi.
-- **Disk:** sisa ~2 GiB setelah uji Docker. ⚠️ Bersihkan sebelum build besar.
+- **Disk:** ~4 GiB setelah membersihkan clone rujukan, image Arcium 0.13.2, dan cache debug (izin Dien).
+- **`.env` sekarang mengarah ke devnet** (`SOLANA_RPC_URL`, `ARCIUM_CLUSTER_OFFSET=456`, `SERVER_DB_PATH=./data/devnet.sqlite`). Untuk localnet, timpa lewat variabel lingkungan saat menjalankan.
 
 ## 4. Timeline dan milestone
 
@@ -572,7 +574,7 @@ Format: **ID · judul · prioritas · pemilik · dependensi.** Lalu langkah, dan
   - Semua nama variabel di 6.9, tanpa nilai.
   - Buat `PLATFORM_SALT`, `SERVER_DATA_KEY`, dan `JWT_SECRET` secara acak dan tulis ke `.env` (jangan dicetak).
   - **Selesai bila:** `grep -c = .env.example` cocok dengan tabel 6.9.
-- [!] **A6 · Verifikasi jalur devnet Arcium · P0 · agent · A2**
+- [x] **A6 · Verifikasi jalur devnet Arcium · P0 · agent · A2**
   - Baca docs Arcium tentang deploy ke devnet (cluster offset, biaya, akun MXE). Coba deploy circuit hello ke devnet.
   - **Selesai bila:** deploy devnet berhasil (catat `ARCIUM_CLUSTER_OFFSET`), **atau** terbukti tidak tersedia dan cadangan "demo localnet terekam" diaktifkan (bagian 12). Catat hasilnya di Progress Log.
 - [x] **A7 · Commit pertama · P0 · agent · A1–A5**
@@ -730,7 +732,7 @@ Format: **ID · judul · prioritas · pemilik · dependensi.** Lalu langkah, dan
   - **Selesai bila:** satu perintah menyiapkan seluruh skenario.
 - [ ] **H2 · Uji E2E manual F0–F10 · P0 · agent + Dien · H1, G2–G8**
   - **Selesai bila:** checklist alur lengkap tercentang; durasi tiap langkah tercatat.
-- [!] **H3 · Deploy program ke devnet · P0 · agent · A6, C14**
+- [x] **H3 · Deploy program ke devnet · P0 · agent · A6, C14**
   - **Selesai bila:** `BISIK_PROGRAM_ID` devnet aktif, atau cadangan localnet terekam diaktifkan.
 
 ### Fase I: Hosting [Usulan, D-25]
@@ -896,6 +898,14 @@ Hanya ditambah, jangan dihapus. Format: `waktu WIB · siapa · apa · bukti/path
 - 2026-10-10 17:10 · agent · I2 disiapkan: `Dockerfile`, `.dockerignore`, `railway.json`; image dibangun dan dijalankan lokal, `/v1/health` OK. Deploy Railway menunggu Dien · `docs/deploy-railway.md`
 - 2026-10-10 17:10 · agent · B5: artefak zkey dari `snark-artifacts` (MIT), ceremony Semaphore V4 di ceremony.pse.dev; hash dipin. Jumlah kontributor belum terverifikasi · https://docs.semaphore.pse.dev/trusted-setup
 - 2026-10-10 17:10 · agent · D4 dan D6 ditunda (P1/P2). Alasan: frontend lebih mendesak; sinyal pembeli sudah tersedia lewat server (asumsi kepercayaan Veritas) · bagian 3.2
+
+- 2026-10-10 18:00 · Dien · Menambah ~6 SOL ke wallet deploy `FRTMLy9…` (wallet CLI `~/.config/solana/id.json`, juga operator Bisik) · saldo 13,88 SOL
+- 2026-10-10 18:05 · agent · Deploy pertama gagal `Max retries exceeded` (RPC publik); buffer 6,6 SOL ditutup dan diambil kembali. Deploy ulang lewat buffer sendiri berhasil · program `aFNfbxfgBuQ6tr5qXDpTmTWrQ8hjLGYNEtdp2L7HjvD`
+- 2026-10-10 18:10 · agent · Init MXE gagal: devnet menjalankan Arcium 0.15, CLI kita 0.13.2. Dien memilih upgrade ke 0.15 dan mengizinkan hapus clone `arcium-examples`, image 0.13.2, dan cache build
+- 2026-10-10 18:20 · agent · Upgrade ke Arcium 0.15.0 tanpa perubahan kode. `arcium test` LULUS lagi; latensi MPC localnet 2,8–3,9 dtk · `../Ideation-Colosseum/spikes/bisik-e2e5.log`
+- 2026-10-10 18:25 · agent · Program devnet di-upgrade (hash onchain = build lokal `2ed56b58…`), MXE devnet selesai (recovery material) · tx `51481H5j…`
+- 2026-10-10 18:25 · Dien + agent · Circuit dihosting di repo publik baru `scientivan/bisik-circuits` (hanya .arcis, bukan source), URL raw dipin ke commit `a86729c`. Hash file cocok dengan build lokal
+- 2026-10-10 18:30 · agent · Seed demo di devnet sukses: comp def offchain, config, grup Gold 5 anggota, 3 pembeli, 2 market, 6 stake anonim. MPC devnet berjalan (alokasi ±4–20 dtk). Keeper devnet sedang menjalankan siklus penuh
 
 ---
 

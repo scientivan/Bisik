@@ -40,7 +40,7 @@ importers:
         version: 1.9.7
       '@reclaimprotocol/js-sdk':
         specifier: 5.8.2
-        version: 5.8.2(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+        version: 5.8.2(bufferutil@4.1.0)
       '@solana/spl-token':
         specifier: ^0.4.9
         version: 0.4.15(@solana/web3.js@1.99.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)
@@ -58,10 +58,10 @@ importers:
     dependencies:
       '@anchor-lang/core':
         specifier: ^1.0.2
-        version: 1.2.1(bufferutil@4.1.0)(typescript@5.9.3)
+        version: 1.2.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@arcium-hq/client':
-        specifier: 0.13.2
-        version: 0.13.2(bufferutil@4.1.0)(typescript@5.9.3)
+        specifier: 0.15.0
+        version: 0.15.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@bisik/shared':
         specifier: workspace:*
         version: link:../packages/shared
@@ -89,10 +89,10 @@ importers:
     dependencies:
       '@anchor-lang/core':
         specifier: ^1.0.2
-        version: 1.2.1(bufferutil@4.1.0)(typescript@5.9.3)
+        version: 1.2.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@arcium-hq/client':
-        specifier: 0.13.2
-        version: 0.13.2(bufferutil@4.1.0)(typescript@5.9.3)
+        specifier: 0.15.0
+        version: 0.15.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@bisik/shared':
         specifier: workspace:*
         version: link:../shared
@@ -133,8 +133,8 @@ importers:
   scripts:
     dependencies:
       '@arcium-hq/client':
-        specifier: 0.13.2
-        version: 0.13.2(bufferutil@4.1.0)(typescript@5.9.3)
+        specifier: 0.15.0
+        version: 0.15.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@bisik/sdk':
         specifier: workspace:*
         version: link:../packages/sdk
@@ -197,8 +197,8 @@ packages:
     resolution: {integrity: sha512-HrVenxlSzosMaSxJo3DSPi3M8KnBpcvB8eWHkLLe1CkBF7Q8HQdkyCkkM6XZvryJGO+98XAX7IRTd9V1wohW+w==}
     engines: {node: '>=10'}
 
-  '@arcium-hq/client@0.13.2':
-    resolution: {integrity: sha512-lAS/iRsYFoPlGaePl2d/6wOOexQn+cy7JfDCmoKYy3oIJk6zvbo8fB+lamZetiHX2S/EH/5GRpZxax3h7RAl8A==}
+  '@arcium-hq/client@0.15.0':
+    resolution: {integrity: sha512-/CICRfTzbab7L3h68ZP8zbELDeAT7jebGjY3PTJyiKkl2iIyqjEpRdEqMuxkMIzwDhAHMKj3ua6RumBUexosXQ==}
     engines: {node: '>=20.18.0'}
 
   '@babel/runtime@7.29.10':
@@ -1408,7 +1408,7 @@ snapshots:
       bn.js: 5.2.5
       buffer-layout: 1.2.2
 
-  '@anchor-lang/core@1.2.1(bufferutil@4.1.0)(typescript@5.9.3)':
+  '@anchor-lang/core@1.2.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
     dependencies:
       '@anchor-lang/borsh': 1.2.1(@solana/web3.js@1.99.0(bufferutil@4.1.0)(typescript@5.9.3))
       '@anchor-lang/errors': 1.2.1
@@ -1429,9 +1429,9 @@ snapshots:
 
   '@anchor-lang/errors@1.2.1': {}
 
-  '@arcium-hq/client@0.13.2(bufferutil@4.1.0)(typescript@5.9.3)':
+  '@arcium-hq/client@0.15.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
     dependencies:
-      '@anchor-lang/core': 1.2.1(bufferutil@4.1.0)(typescript@5.9.3)
+      '@anchor-lang/core': 1.2.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@solana/web3.js': 1.99.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
@@ -1591,7 +1591,7 @@ snapshots:
 
   '@noble/hashes@1.8.0': {}
 
-  '@reclaimprotocol/js-sdk@5.8.2(bufferutil@4.1.0)(utf-8-validate@6.0.6)':
+  '@reclaimprotocol/js-sdk@5.8.2(bufferutil@4.1.0)':
     dependencies:
       canonicalize: 2.1.0
       ethers: 6.13.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)

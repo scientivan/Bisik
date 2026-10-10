@@ -162,7 +162,7 @@ async function main() {
     )[0];
     const method = "init" + c.split("_").map((w) => w[0].toUpperCase() + w.slice(1)).join("") + "CompDef";
     await (program.methods as any)
-      [method[0].toLowerCase() + method.slice(1)]()
+      [method[0].toLowerCase() + method.slice(1)]("")
       .accounts({ compDefAccount: compDef, payer: admin.publicKey, mxeAccount, addressLookupTable: lut })
       .signers([admin])
       .rpc({ preflightCommitment: "confirmed", commitment: "confirmed" });

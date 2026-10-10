@@ -37,7 +37,9 @@ const RPC = process.env.SOLANA_RPC_URL ?? "http://127.0.0.1:8899";
 const CLUSTER = Number(process.env.ARCIUM_CLUSTER_OFFSET ?? 0);
 const SERVER = process.env.SERVER_PUBLIC_URL ?? "http://localhost:8787";
 const LOCAL = /127\.0\.0\.1|localhost/.test(RPC);
-const UPLOAD = process.env.SEED_UPLOAD_CIRCUITS ? process.env.SEED_UPLOAD_CIRCUITS === "1" : LOCAL;
+/** Public base URL hosting contracts/build/*.arcis (devnet). Empty = upload circuits onchain (localnet). */
+const CIRCUIT_URL = process.env.BISIK_CIRCUIT_BASE_URL ?? "";
+const UPLOAD = CIRCUIT_URL === "";
 const SUBMIT_SECS = Number(process.env.SEED_SUBMIT_SECS ?? 900);
 const DEMO_DIR = fileURLToPath(new URL("./.demo/", import.meta.url));
 const kpPath = (process.env.OPERATOR_KEYPAIR_PATH ?? "~/.config/solana/id.json").replace(/^~(?=\/)/, homedir());
@@ -149,7 +151,7 @@ async function setup() {
     const compDef = PublicKey.findProgramAddressSync([getArciumAccountBaseSeed("ComputationDefinitionAccount"), PROGRAM_ID.toBuffer(), getCompDefAccOffset(c)], getArciumProgramId())[0];
     if (await exists(compDef)) continue;
     const m = "init" + c.split("_").map((w) => w[0].toUpperCase() + w.slice(1)).join("") + "CompDef";
-    await rpc(program.methods[m[0].toLowerCase() + m.slice(1)]().accounts({ compDefAccount: compDef, payer: operator.publicKey, mxeAccount, addressLookupTable: lut }));
+    await rpc(program.methods[m[0].toLowerCase() + m.slice(1)](CIRCUIT_URL).accounts({ compDefAccount: compDef, payer: operator.publicKey, mxeAccount, addressLookupTable: lut }));
     if (UPLOAD) await uploadCircuit(provider, c, PROGRAM_ID, readFileSync(fileURLToPath(new URL(`../contracts/build/${c}.arcis`, import.meta.url))), true);
     log("comp def", c);
   }

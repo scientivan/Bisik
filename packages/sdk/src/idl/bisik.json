@@ -784,7 +784,12 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "circuit_base_url",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "init_auction_callback",
@@ -1060,7 +1065,12 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "circuit_base_url",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "init_init_market_agg_comp_def",
@@ -1105,7 +1115,12 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "circuit_base_url",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "init_market_agg_callback",
@@ -1325,7 +1340,12 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "circuit_base_url",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "init_position_hits_comp_def",
@@ -1370,7 +1390,12 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "circuit_base_url",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "init_preview_comp_def",
@@ -1415,7 +1440,12 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "circuit_base_url",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "init_resolve_auction_comp_def",
@@ -1460,7 +1490,12 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "circuit_base_url",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "init_winning_weights_comp_def",
@@ -1505,7 +1540,12 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "circuit_base_url",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "open_bid",
@@ -5894,6 +5934,12 @@
           },
           {
             "name": "PlaintextPoint"
+          },
+          {
+            "name": "UnsynchronizedPlaintextBools",
+            "fields": [
+              "u32"
+            ]
           }
         ]
       }
