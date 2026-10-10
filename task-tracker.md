@@ -881,3 +881,6 @@ Hanya ditambah, jangan dihapus. Format: `waktu WIB · siapa · apa · bukti/path
 4. **Kalau spesifikasi (bagian 6) berubah**, perbarui di commit yang sama, lalu catat di Progress Log.
 5. **Keputusan baru dari Dien:** pindahkan dari bagian 14 ke tabel 1.5. Catat juga di Decision Log living doc dan di `../AGENTS.md`.
 6. **Naikkan versi** di header: minor untuk status, mayor untuk perubahan rencana.
+- 2026-10-10 · agent · A1–A5, A7, B1–B3, C1–C14, D1–D3, D5, D7, F1–F7 selesai. `contracts/tests/e2e.ts` LULUS di localnet Arcium (stake ZK, agregasi MPC, lelang GSP, seleksi berurutan, sengketa, settlement, klaim ZK). Latensi MPC 2,6–4,1 dtk per circuit. `place_bid` dipecah menjadi `open_bid` + `place_bid` (batas stack). Commit `5964495` di-push · `contracts/`, `packages/`
+- 2026-10-10 · agent · A6 [!]: deploy ke devnet butuh ~13 SOL di puncak (sewa program 6,6 SOL ×2); wallet deploy punya 7,9 SOL dan airdrop terkena batas. Opsi circuit offchain (`BISIK_CIRCUIT_BASE_URL`) sudah ditambahkan · menunggu Dien
+- SISA: packages/sdk, apps/server (E1–E8), services/keeper, scripts/seed-demo, deploy devnet, lalu frontend (G)

@@ -11,7 +11,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 use arcium_anchor::prelude::*;
-use arcium_client::idl::arcium::types::CallbackAccount;
+use arcium_client::idl::arcium::types::{CallbackAccount, CircuitSource, OffChainCircuitSource};
 
 mod vk;
 mod zk;
@@ -137,42 +137,42 @@ pub mod bisik {
     // ───────────────────────────── computation definitions ─────────────────────────────
 
     pub fn init_init_market_agg_comp_def(ctx: Context<InitInitMarketAggCompDef>) -> Result<()> {
-        init_computation_def(ctx.accounts, None)?;
+        init_computation_def(ctx.accounts, circuit_source("init_market_agg", arcium_macros::circuit_hash!("init_market_agg")))?;
         Ok(())
     }
 
     pub fn init_allocate_comp_def(ctx: Context<InitAllocateCompDef>) -> Result<()> {
-        init_computation_def(ctx.accounts, None)?;
+        init_computation_def(ctx.accounts, circuit_source("allocate", arcium_macros::circuit_hash!("allocate")))?;
         Ok(())
     }
 
     pub fn init_preview_comp_def(ctx: Context<InitPreviewCompDef>) -> Result<()> {
-        init_computation_def(ctx.accounts, None)?;
+        init_computation_def(ctx.accounts, circuit_source("preview", arcium_macros::circuit_hash!("preview")))?;
         Ok(())
     }
 
     pub fn init_init_auction_comp_def(ctx: Context<InitInitAuctionCompDef>) -> Result<()> {
-        init_computation_def(ctx.accounts, None)?;
+        init_computation_def(ctx.accounts, circuit_source("init_auction", arcium_macros::circuit_hash!("init_auction")))?;
         Ok(())
     }
 
     pub fn init_place_bid_comp_def(ctx: Context<InitPlaceBidCompDef>) -> Result<()> {
-        init_computation_def(ctx.accounts, None)?;
+        init_computation_def(ctx.accounts, circuit_source("place_bid", arcium_macros::circuit_hash!("place_bid")))?;
         Ok(())
     }
 
     pub fn init_resolve_auction_comp_def(ctx: Context<InitResolveAuctionCompDef>) -> Result<()> {
-        init_computation_def(ctx.accounts, None)?;
+        init_computation_def(ctx.accounts, circuit_source("resolve_auction", arcium_macros::circuit_hash!("resolve_auction")))?;
         Ok(())
     }
 
     pub fn init_winning_weights_comp_def(ctx: Context<InitWinningWeightsCompDef>) -> Result<()> {
-        init_computation_def(ctx.accounts, None)?;
+        init_computation_def(ctx.accounts, circuit_source("winning_weights", arcium_macros::circuit_hash!("winning_weights")))?;
         Ok(())
     }
 
     pub fn init_position_hits_comp_def(ctx: Context<InitPositionHitsCompDef>) -> Result<()> {
-        init_computation_def(ctx.accounts, None)?;
+        init_computation_def(ctx.accounts, circuit_source("position_hits", arcium_macros::circuit_hash!("position_hits")))?;
         Ok(())
     }
 
@@ -1005,6 +1005,14 @@ pub mod bisik {
         )?;
         Ok(())
     }
+}
+
+/// Circuits are uploaded onchain for localnet. For devnet, set `BISIK_CIRCUIT_BASE_URL`
+/// at build time to a public URL hosting `build/*.arcis`; the hash pins each file.
+pub fn circuit_source(name: &str, hash: [u8; 32]) -> Option<CircuitSource> {
+    option_env!("BISIK_CIRCUIT_BASE_URL").map(|base| {
+        CircuitSource::OffChain(OffChainCircuitSource { source: format!("{}/{}.arcis", base.trim_end_matches('/'), name), hash })
+    })
 }
 
 /// Options buyer `i` may see: rank #1 sees all, rank #2 all except #1's hidden set,
