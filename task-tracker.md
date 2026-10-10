@@ -1,6 +1,6 @@
 # Bisik: Task Tracker, Rencana Build, dan Spesifikasi Antarmuka
 
-> **Versi 1.4 · diperbarui Sabtu 10 Oktober 2026, 20:00 WIB · pemilik: Dien (keputusan) dan agent (eksekusi)**
+> **Versi 1.5 · diperbarui Sabtu 10 Oktober 2026, 21:15 WIB · pemilik: Dien (keputusan) dan agent (eksekusi)**
 >
 > Dokumen hidup. Dokumen ini satu-satunya tempat status pengerjaan Bisik. Setiap kali ada task yang dimulai, selesai, gagal, atau berubah, perbarui status task di bagian 8 dan tambahkan baris di **Progress Log** (bagian 15).
 >
@@ -176,7 +176,7 @@ Semua path relatif terhadap folder `Bisik/`.
 - ✅ **Devnet live (A6/H3):** program `aFNfbxfgBuQ6tr5qXDpTmTWrQ8hjLGYNEtdp2L7HjvD` + MXE di cluster Arcium **456**, Arcium **0.15.0**. Circuit di repo publik `scientivan/bisik-circuits` (URL raw dipin ke commit `a86729c`). Seed demo devnet sukses (mint mock USDC `F1uGxYkPfypwni9tfLDSCanFX5dN1nDhPSz7izFEWR37`).
 - ❌ Frontend (fase G), termasuk pembuatan bukti di browser (B4). Dikerjakan terakhir sesuai permintaan Dien.
 - ❌ Uji live Reclaim dengan akun GitHub asli (R23). Butuh server di URL publik (I3) atau tunnel.
-- ✅ D4 (`reveal_signals`) dan D6 (reputasi terenkripsi) lulus di localnet. ❌ **Belum di devnet**: upgrade butuh ±13 SOL di puncak (program jadi 1.597.016 byte), saldo operator 6,31 SOL.
+- ✅ D4 (`reveal_signals`) dan D6 (reputasi terenkripsi) lulus di localnet **dan di devnet** (market 3). ⚠️ Tabel reputasi devnet berisi 6 entri acak dari insiden kredit posisi lama (lihat Progress Log 20:45).
 - ❌ Video, project di Arena, naskah demo.
 
 ### 3.3 Lingkungan
@@ -935,6 +935,12 @@ Hanya ditambah, jangan dihapus. Format: `waktu WIB · siapa · apa · bukti/path
 - 2026-10-10 20:00 · subagent + agent · D4 + D6 selesai di localnet: `arcium test` LULUS dengan asersi baru (3 pembeli mendekripsi tampilan masing-masing dan cocok dengan bobot onchain; 4 posisi dikredit, kredit ganda ditolak; tier epoch 2 = 1,2,2,2,2; reveal kedua per epoch ditolak). Root memverifikasi log · `../Ideation-Colosseum/spikes/bisik-e2e-d4d6.log`
 - 2026-10-10 20:00 · agent · Integrasi: seed memakai `encryptStakeSecrets` (satu kunci untuk opsi + kredit) dan opsi `SEED_V2=1` (comp def D4/D6 + init reputasi); keeper memanggil `credit_reputation` setelah settlement bila tabel siap; `POST /v1/outcomes/check` kini wajib login; MCP mengirim token. Tes: server 7/7, zk 2/2, shared 4/4, veritas 5/5; semua paket typecheck
 - 2026-10-10 20:00 · agent · Devnet belum di-upgrade ke D4/D6: perlu ±13 SOL di puncak (perpanjang ±287 KB ≈ 2 SOL + buffer 1,6 MB ≈ 11 SOL yang kembali), saldo 6,31 SOL · menunggu Dien
+
+- 2026-10-10 20:30 · Dien · Mengirim 7 SOL ke wallet deploy (saldo 13,31 SOL)
+- 2026-10-10 20:40 · agent · Devnet di-upgrade ke versi D4/D6: perpanjang 269.100 byte, buffer, upgrade; hash onchain = build lokal `4973d168…`; dana buffer kembali (saldo 11,92 SOL). 4 circuit baru di `scientivan/bisik-circuits` commit `3362b44` (8 circuit lama identik). `seed-demo.ts v2init` membuat 4 comp def + tabel reputasi (MPC `init_rep` di devnet OK)
+- 2026-10-10 20:45 · agent · **D4 lulus di devnet** (market 2): ecosystem-a mask 111, b mask 110, c mask 100; masing-masing mendekripsi bobotnya sendiri lewat `seed-demo.ts reveal`
+- 2026-10-10 20:45 · agent · ⚠️ Insiden: keeper mengkredit 6 posisi lama (market 0–2, dibuat sebelum perbaikan kunci) sebelum dihentikan. Kredit itu terdekripsi dengan kunci salah → sampai 6 dari 32 slot tabel reputasi devnet berisi entri acak. Tidak bisa direset tanpa instruksi baru + upgrade. Perbaikan: keeper hanya mengkredit market ID ≥ `KEEPER_REP_FROM_MARKET` (=3 di `.env`)
+- 2026-10-10 21:15 · agent · **D4 + D6 LULUS di devnet** (market 3): siklus lelang penuh → 3 pembeli mendekripsi tampilan masing-masing (mask 111/110/100) → settlement → keeper `credit_reputation` 4× (credits 6→10) → `epoch_tiers` mengungkap daftar epoch 2 yang diurutkan di MPC (10 entri: 4 asli + 6 acak dari insiden); ayu/bima/citra/dewa level 2 (naik satu tier), eka tanpa catatan → klaim ayu 213,58 USDC ke alamat baru. Saldo operator 11,72 SOL · `tmp/devnet-d6.log` (lokal)
 
 ---
 

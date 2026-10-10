@@ -159,7 +159,11 @@ async function step(pubkey: PublicKey, m: any): Promise<string | null> {
  * Skipped when the reputation account is not initialized (e.g. a deployment without D6).
  * One computation per tick to stay gentle on public RPCs.
  */
-async function creditReputation(market: PublicKey): Promise<void> {
+const REP_FROM_MARKET = Number(process.env.KEEPER_REP_FROM_MARKET ?? 0);
+
+async function creditReputation(market: PublicKey, marketId: number): Promise<void> {
+  // Positions staked before the option/credit key fix cannot be decrypted correctly: skip them.
+  if (marketId < REP_FROM_MARKET) return;
   const rep = P.reputation();
   const r: any = await program.account.reputation.fetchNullable(rep);
   if (!r || !r.ready || r.busy) return;
@@ -189,7 +193,7 @@ async function tick() {
           log(`market ${account.id} withdraw_fees error: ${String(e?.message ?? e).slice(0, 160)}`);
         }
       }
-      await creditReputation(publicKey).catch((e) => log(`market ${account.id} credit_reputation error: ${String(e?.message ?? e).slice(0, 160)}`));
+      await creditReputation(publicKey, Number(account.id)).catch((e) => log(`market ${account.id} credit_reputation error: ${String(e?.message ?? e).slice(0, 160)}`));
       continue;
     }
     try {

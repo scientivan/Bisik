@@ -6,6 +6,8 @@
  *   pnpm --filter @bisik/scripts seed select <id> ecosystem-a 0   # winner hides options (in rank order)
  *   pnpm --filter @bisik/scripts seed buyflat <id> ecosystem-c    # flat purchase of the remainder
  *   pnpm --filter @bisik/scripts seed claim <id> ayu 1            # scout claims to a fresh address
+ *   pnpm --filter @bisik/scripts seed reveal <id> ecosystem-a      # D4: MPC-encrypted signal view for a buyer
+ *   pnpm --filter @bisik/scripts seed v2init                     # existing deployment: D4/D6 comp defs + reputation
  *   SEED_ONLY_AUCTION=1 … seed                                    # only create the auction market
  *
  * Needs: program deployed (localnet via `arcium localnet`, or devnet), the API server running
@@ -30,7 +32,7 @@ import {
   getMXEAccAddress,
   uploadCircuit,
 } from "@arcium-hq/client";
-import { makeProvider, program as mkProgram, pdas, PROGRAM_ID, CIRCUITS, CIRCUITS_V2, arciumAccounts, queueAndWait, encryptForMxe, encryptStakeSecrets, fetchMxeKey, computeBudget, anchor, Status } from "@bisik/sdk";
+import { makeProvider, program as mkProgram, pdas, PROGRAM_ID, CIRCUITS, CIRCUITS_V2, arciumAccounts, queueAndWait, encryptForMxe, encryptStakeSecrets, fetchMxeKey, newViewKey, decryptSignals, signalRevealToJson, decodeEpochTiers, computeBudget, anchor, Status } from "@bisik/sdk";
 import { buildGroup, proveStake, proveClaim } from "@bisik/zk";
 import { keccak, utf8, Tier, fromHex } from "@bisik/shared";
 
@@ -320,6 +322,59 @@ async function bids(id: number) {
   }
 }
 
+/** D4: a buyer asks MPC to encrypt its visible signal weights to a fresh view key, then decrypts locally. */
+async function reveal(id: number, name: string) {
+  const buyer = demoKeypair(`buyer-${name}`);
+  const market = P.market(id);
+  const mxeKey = await fetchMxeKey(provider);
+  const view = newViewKey();
+  const signals = P.signals(market, buyer.publicKey);
+  await queueAndWait(provider, PROGRAM_ID, (o) =>
+    program.methods
+      .revealSignals(o, Array.from(view.publicKey))
+      .accountsPartial({ payer: buyer.publicKey, market, agg: P.agg(market), signals, ...arciumAccounts(PROGRAM_ID, CLUSTER, o, "reveal_signals") })
+      .signers([buyer]),
+  );
+  const acc: any = await program.account.signalReveal.fetch(signals);
+  const weights = decryptSignals(signalRevealToJson(acc)!, view.secretKey, mxeKey);
+  log(`${name}: visible mask ${acc.mask.toString(2)} → decrypted weights [${weights.slice(0, (await program.account.market.fetch(market)).optionCount).join(", ")}]`);
+}
+
+/** D6: operator reveals the sorted per-epoch level list once; each demo scout looks up its own level. */
+async function tiers() {
+  const rep = P.reputation();
+  await queueAndWait(provider, PROGRAM_ID, (o) =>
+    program.methods.epochTiers(o).accountsPartial({ payer: operator.publicKey, config: P.config(), rep, ...arciumAccounts(PROGRAM_ID, CLUSTER, o, "epoch_tiers") }).signers([operator]),
+  );
+  const r: any = await program.account.reputation.fetch(rep);
+  const names = ["ayu", "bima", "citra", "dewa", "eka"];
+  const mine = decodeEpochTiers(r.tiers, SCOUTS.map((x) => x.commitment));
+  log(`epoch ${r.tiersEpoch} tiers revealed (${r.tiers.filter((x: any) => BigInt(x.toString()) !== 0n).length} non-empty entries, sorted in MPC)`);
+  mine.forEach((m, i) => log(`  ${names[i]}: level ${m.level}${m.credited ? "" : " (no record)"}`));
+}
+
+/** Upgrade path for an existing deployment: D4/D6 comp defs + the encrypted reputation table. */
+async function initV2() {
+  const arcium = getArciumProgram(provider);
+  const mxeAccount = getMXEAccAddress(PROGRAM_ID);
+  const mxe = await arcium.account.mxeAccount.fetch(mxeAccount);
+  const lut = getLookupTableAddress(PROGRAM_ID, mxe.lutOffsetSlot);
+  for (const c of CIRCUITS_V2) {
+    const compDef = PublicKey.findProgramAddressSync([getArciumAccountBaseSeed("ComputationDefinitionAccount"), PROGRAM_ID.toBuffer(), getCompDefAccOffset(c)], getArciumProgramId())[0];
+    if (await exists(compDef)) continue;
+    const m = "init" + c.split("_").map((w) => w[0].toUpperCase() + w.slice(1)).join("") + "CompDef";
+    await rpc(program.methods[m[0].toLowerCase() + m.slice(1)](CIRCUIT_URL).accounts({ compDefAccount: compDef, payer: operator.publicKey, mxeAccount, addressLookupTable: lut }));
+    if (UPLOAD) await uploadCircuit(provider, c, PROGRAM_ID, readFileSync(fileURLToPath(new URL(`../contracts/build/${c}.arcis`, import.meta.url))), true);
+    log("comp def", c);
+  }
+  if (!(await exists(P.reputation()))) {
+    await queueAndWait(provider, PROGRAM_ID, (o) =>
+      program.methods.initReputation(o).accountsPartial({ payer: operator.publicKey, config: P.config(), rep: P.reputation(), ...arciumAccounts(PROGRAM_ID, CLUSTER, o, "init_rep") }).signers([operator]),
+    );
+  }
+  log("encrypted reputation table ready (D6)");
+}
+
 /** A scout claims stake + payout to a brand-new address by proving ownership of the position (F10). */
 async function claim(id: number, scoutName: string, slot: number) {
   const names = ["ayu", "bima", "citra", "dewa", "eka"];
@@ -369,6 +424,12 @@ const [cmd, arg, arg2, arg3] = process.argv.slice(2);
     ? select(Number(arg), arg2, (arg3 ?? "").split(",").filter(Boolean).map(Number))
     : cmd === "buyflat"
       ? buyFlat(Number(arg), arg2)
+      : cmd === "reveal"
+        ? reveal(Number(arg), arg2)
+      : cmd === "tiers"
+        ? tiers()
+      : cmd === "v2init"
+        ? initV2()
       : cmd === "claim"
         ? claim(Number(arg), arg2, Number(arg3 ?? 1))
         : setup())
