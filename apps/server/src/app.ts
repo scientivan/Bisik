@@ -63,7 +63,7 @@ export function createApp(d: Deps) {
       const idx = await addMember(d.db, d.chain, v.tier, epoch, row.identity_commitment);
       d.db.prepare("UPDATE sessions SET status='VERIFIED', tier=?, epoch=?, leaf_index=? WHERE id=?").run(v.tier, epoch, idx, sessionId);
     } catch (e) {
-      const code = e instanceof VerifyError ? e.code : "ERROR";
+      const code = e instanceof VerifyError ? (e.detail ? `${e.code}: ${e.detail}` : e.code) : `ERROR: ${String((e as Error)?.message ?? e).slice(0, 200)}`;
       d.db.prepare("UPDATE sessions SET status='REJECTED', error=? WHERE id=?").run(code, sessionId);
     }
     return d.db.prepare("SELECT * FROM sessions WHERE id=?").get(sessionId);

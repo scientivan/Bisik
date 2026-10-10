@@ -143,12 +143,21 @@ Juri secara eksplisit tertarik pada alasan di balik keputusan teknis. Pilih 3–
 |---|---|
 | **Verifikasi zkTLS offchain, onchain hanya tier + nullifier** (D-16) | [Fakta] Verifikasi onchain mengirim `parameters` dan `context` bukti di transaksi, sehingga username jadi publik. [Fakta] Verifier Reclaim Solana 2024 tidak aktif di devnet maupun mainnet, dan format identifier-nya tidak cocok dengan bukti SDK 5.8.2. Kami memilih privasi, lalu mengungkapkan asumsi kepercayaannya |
 | **Provider GitHub harus membuktikan kepemilikan akun** | [Fakta] Halaman kontribusi GitHub publik (bisa dibuka tanpa login). Provider komunitas "GitHub test 1" hanya membacanya, jadi siapa pun bisa mengaku pemilik akun orang lain. Verifier Bisik menolak bukti yang tidak berasal dari halaman yang memerlukan login (R23) |
-| **Grup anonim Semaphore + reputasi lewat kredit terenkripsi** (D-17) | Memisahkan tiga hubungan: username ↔ identitas (verifier, sesaat), identitas ↔ posisi (tidak ada yang tahu), identitas ↔ skor (hanya Arcium). Reputasi tetap terkumpul tanpa posisi bisa dihubungkan. [Fakta] Verifikasi Groth16 di Solana: 96.861 CU |
+| **Grup anonim Semaphore + reputasi lewat kredit terenkripsi** (D-17) | Memisahkan tiga hubungan: username ↔ identitas (verifier, sesaat), identitas ↔ posisi (tidak ada yang tahu), identitas ↔ skor (hanya Arcium). [Fakta] Kredit terenkripsi sudah dilampirkan di setiap stake, tetapi circuit pengumpul reputasinya (D6) **belum dibuat**. Sebut sebagai rancangan/roadmap, jangan sebagai fitur jalan. [Fakta] Verifikasi Groth16 di Solana: 96.861 CU |
 | **Maksimal 3 opsi per scout tanpa tahu siapa scout-nya** | Scope ZK = (market, slot 1–3). Setiap slot hanya punya satu nullifier |
 | **Lelang tertutup harga kedua yang diperumum, dengan ceiling deposit** | Lelang tertutup mengurangi kolusi; harga cadangan mengurangi shill bid; hasil lelang ke scout, bukan ke pembuat market. Setoran dana publik, jadi pembeli menyetor batas atas, bukan nilai tawaran |
 | **Payout hanya kalau ada hasil** | [Fakta] Program yang sudah ada (Retro9000, Metis) membayar dengan pemicu yang sama, jadi pos anggarannya sudah ada |
 | **Veritas sebagai modul internal; skor hanya penanda, bukan dasar slashing** (D-21) | [Inferensi] Detektor tulisan AI tidak cukup andal untuk menghukum orang, jadi skornya hanya membantu pembeli menilai. Veritas adalah rumus noisy-OR `DRS = 1 − (1−D)(1−A)` dari proyek Dien sebelumnya, Veritas UHI9 (lihat bagian 10) |
 | **Ditulis sendiri, bukan menyalin contoh Arcium** | [Fakta] Repo `arcium-hq/examples` tidak berlisensi. Contoh lelangnya juga tidak punya escrow, tidak menegakkan harga cadangan, dan tidak mengikat penawar ke signer. Bisik menambal semua itu |
+
+### 6.1 Fakta build yang boleh disebut (per 10 Okt 2026)
+
+- [Fakta] Program `aFNfbxfgBuQ6tr5qXDpTmTWrQ8hjLGYNEtdp2L7HjvD` jalan di **Solana devnet** dengan MPC **Arcium devnet** (cluster 456, Arcium 0.15.0). Circuit dihosting publik dan dicek hash-nya oleh node Arcium.
+- [Fakta] Tes ujung-ke-ujung `contracts/tests/e2e.ts` lulus dengan bukti ZK dan MPC sungguhan: stake anonim, agregasi terenkripsi, preview, lelang GSP (nilai tawaran tidak pernah terbuka), seleksi berurutan, sengketa (stake hoax ke amal), settlement MPC, klaim ZK ke alamat baru.
+- [Fakta] Latensi satu langkah MPC di localnet 2,8–3,9 detik; di devnet sekitar 4–20 detik (sampel kecil, RPC publik).
+- [Fakta] Keeper menjalankan market dari Open sampai Settled tanpa campur tangan manual.
+- [Fakta] Verifier Reclaim diuji dengan bukti asli dari SDK: tanda tangan attestor dicek, bukti yang diubah ditolak, username tidak pernah disimpan.
+- Jangan klaim: reputasi terenkripsi sudah jalan (D6), skor sinyal dihitung di MPC (D4), atau uji live GitHub sudah sukses (belum diuji, R23).
 
 ---
 

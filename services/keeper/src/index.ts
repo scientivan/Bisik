@@ -60,11 +60,13 @@ async function step(pubkey: PublicKey, m: any): Promise<string | null> {
   const escrow = P.escrow(market);
   const t = now();
 
-  if (!m.aggReady && !m.aggBusy) {
+  // The creator initializes encrypted state right after create_market; only step in if it stalled.
+  const fresh = t - Number(m.submitStart) < 120;
+  if (!m.aggReady && !m.aggBusy && !fresh) {
     await queue("init_market_agg", (o) => program.methods.initMarketState(o).accountsPartial({ payer: operator.publicKey, market, agg, ...arc(o, "init_market_agg") }));
     return "init_market_agg";
   }
-  if (m.kind === Kind.Auction && !m.auctionReady && !m.auctionBusy) {
+  if (m.kind === Kind.Auction && !m.auctionReady && !m.auctionBusy && !fresh) {
     await queue("init_auction", (o) => program.methods.initAuctionState(o).accountsPartial({ payer: operator.publicKey, market, auction, ...arc(o, "init_auction") }));
     return "init_auction";
   }
@@ -155,7 +157,18 @@ async function step(pubkey: PublicKey, m: any): Promise<string | null> {
 async function tick() {
   const markets = await program.account.market.all();
   for (const { publicKey, account } of markets) {
-    if (account.status === Status.Settled) continue;
+    if (account.status === Status.Settled) {
+      if (!account.feesWithdrawn && (account.pools as any[]).some((x) => Number(x) > 0)) {
+        try {
+          const cfg = await program.account.config.fetch(P.config());
+          await send(program.methods.withdrawFees().accounts({ signer: operator.publicKey, config: P.config(), market: publicKey, escrow: P.escrow(publicKey), treasuryToken: cfg.treasury, tokenProgram: TOKEN_PROGRAM_ID }));
+          log(`market ${account.id} [Settled] → withdraw_fees`);
+        } catch (e: any) {
+          log(`market ${account.id} withdraw_fees error: ${String(e?.message ?? e).slice(0, 160)}`);
+        }
+      }
+      continue;
+    }
     try {
       const did = await step(publicKey, account);
       if (did) log(`market ${account.id} [${STATUS_NAMES[account.status]}] → ${did}`);

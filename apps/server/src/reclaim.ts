@@ -14,7 +14,7 @@ export interface VerifiedScout {
 export const LOGIN_ONLY_URL = /^https:\/\/github\.com\/(settings\/|$|\?|dashboard)/;
 
 export class VerifyError extends Error {
-  constructor(public code: string, msg: string) {
+  constructor(public code: string, msg: string, public detail?: string) {
     super(msg);
   }
 }
@@ -42,6 +42,7 @@ export async function verifyScoutProofs(proofs: any[], opts: { salt: string; pro
   let username: string | undefined;
   let contributions: number | undefined;
   let ownership = false;
+  const urls: string[] = [];
   for (const p of proofs) {
     const signers = recoverSignersOfSignedClaim({ claim: p.claimData, signatures: p.signatures.map((s: string) => Buffer.from(s.replace(/^0x/, ""), "hex")) });
     if (!signers.some((s: string) => known.includes(s))) throw new VerifyError("UNKNOWN_ATTESTOR", "signer is not a current Reclaim attestor");
@@ -56,10 +57,13 @@ export async function verifyScoutProofs(proofs: any[], opts: { salt: string; pro
       if (LOGIN_ONLY_URL.test(String(params.url ?? ""))) ownership = true;
     }
     if (c) contributions = Number(String(c).replace(/[^0-9]/g, ""));
+    if (params.url) urls.push(String(params.url));
   }
+  // Diagnostics for R23: which pages the proofs came from, with the username redacted.
+  const sources = () => urls.map((x) => (username ? x.split(username).join("{user}") : x)).join(" | ");
   if (!username) throw new VerifyError("NO_USERNAME", "proof does not reveal the account");
-  if (opts.enforceLoginOnly && !ownership) throw new VerifyError("UNOWNED_SOURCE", "username not taken from a login-only page (R23)");
-  if (contributions === undefined || Number.isNaN(contributions)) throw new VerifyError("NO_CONTRIBUTIONS", "proof does not reveal a contribution count");
+  if (opts.enforceLoginOnly && !ownership) throw new VerifyError("UNOWNED_SOURCE", "username not taken from a login-only page (R23)", sources());
+  if (contributions === undefined || Number.isNaN(contributions)) throw new VerifyError("NO_CONTRIBUTIONS", "proof does not reveal a contribution count", sources());
   const tier = tierFromContributions(contributions);
   if (tier === null) throw new VerifyError("BELOW_THRESHOLD", "fewer than 50 contributions in 12 months");
   const sourceNullifier = keccak(utf8(`${opts.salt}|github|${username.toLowerCase()}`));

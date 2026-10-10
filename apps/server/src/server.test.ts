@@ -92,7 +92,7 @@ test("Reclaim verifier: real signed proof passes signature + attestor checks; ta
   const { readFileSync } = await import("node:fs");
   const fixture = JSON.parse(readFileSync(new URL("../test-fixtures/reclaim-sdk-proof.json", import.meta.url), "utf8"));
   const opts = { salt: "s", providerId: "p", enforceLoginOnly: false };
-  await assert.rejects(() => verifyScoutProofs([structuredClone(fixture)], opts), (e: any) => e.code === "NO_CONTRIBUTIONS");
+  await assert.rejects(() => verifyScoutProofs([structuredClone(fixture)], opts), (e: any) => e.code === "NO_CONTRIBUTIONS" && !String(e.detail).includes("srivatsanqb"));
   await assert.rejects(() => verifyScoutProofs([structuredClone(fixture)], { ...opts, enforceLoginOnly: true }), (e: any) => e.code === "UNOWNED_SOURCE");
   const t = structuredClone(fixture);
   t.claimData.context = t.claimData.context.replace("srivatsanqb", "someoneelse");

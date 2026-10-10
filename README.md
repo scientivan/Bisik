@@ -4,7 +4,13 @@
 
 *Bisik* is Indonesian for "whisper". Insiders (hackathon judges, mentors, developers) quietly flag promising teams that have not yet committed to a chain. Ecosystems buy those signals, can bid for exclusivity, and pay the insiders **only when a team actually ships on the buyer's chain**.
 
-> Status: hackathon build for the Colosseum Crypto World's Fair (Solana track). The on-chain program, MPC circuits, ZK identity and Veritas module are implemented and pass an end-to-end test on the Arcium localnet. The frontend is in progress.
+> Status: hackathon build for the Colosseum Crypto World's Fair (Solana track). The on-chain program, MPC circuits, ZK identity, Veritas module, API server and keeper are implemented. The end-to-end test passes on the Arcium localnet, and the program runs on **Solana devnet with Arcium MPC (cluster 456, Arcium 0.15.0)**. The frontend is in progress.
+
+| | |
+|---|---|
+| Program (devnet) | [`aFNfbxfgBuQ6tr5qXDpTmTWrQ8hjLGYNEtdp2L7HjvD`](https://explorer.solana.com/address/aFNfbxfgBuQ6tr5qXDpTmTWrQ8hjLGYNEtdp2L7HjvD?cluster=devnet) |
+| Compiled circuits | [`scientivan/bisik-circuits`](https://github.com/scientivan/bisik-circuits) (pinned by commit; each file is hash-checked by the Arx nodes) |
+| Demo USDC | a mock 6-decimal mint created by the seed script (demo only) |
 
 ## Why
 
@@ -42,15 +48,29 @@
 | `services/keeper` | Lifecycle worker (close, preview, resolve, settle) |
 | `scripts/` | Verification-key generation, demo seeding |
 
-## Run the end-to-end test
+## Run it
+
+Requirements: Solana CLI 3.1.10, Anchor 1.0.2, Arcium 0.15.0 (`arcup`), Rust 1.89.0, Docker, Node 24, pnpm 10.
 
 ```bash
 pnpm install
-pnpm --filter @bisik/shared --filter @bisik/zk build
+pnpm --filter @bisik/shared --filter @bisik/zk --filter @bisik/veritas --filter @bisik/sdk build
+
+# End-to-end test on a local Arcium cluster (real ZK proofs and MPC)
 cd contracts && arcium build && arcium test
 ```
 
-Requirements: Solana CLI 3.1.10, Anchor 1.0.2, Arcium 0.13.2 (`arcup`), Rust 1.89.0, Docker, Node 22+, pnpm.
+Local stack (one `.env` at the repo root; see `.env.example`):
+
+```bash
+cd contracts && arcium localnet --skip-build          # validator + Arx nodes
+cd apps/server && BISIK_DEMO=1 npx tsx src/index.ts    # API on :8787
+npx tsx scripts/seed-demo.ts                           # fictional demo markets, scouts, buyers
+cd services/keeper && npx tsx src/index.ts             # drives markets to settlement
+```
+
+Demo actions: `seed-demo.ts bids <id>`, `select <id> ecosystem-a 0`, `buyflat <id> ecosystem-c`, `claim <id> ayu 1`.
+Hosting the server and keeper: `docs/deploy-railway.md`.
 
 ## Trust assumptions (v1) and limitations
 
@@ -60,9 +80,10 @@ These are deliberate v1 trade-offs, disclosed rather than hidden:
 2. **Veritas:** the operator's Veritas service reads plaintext reasons in order to score and filter them. A TEE is planned for v2.
 3. **Disputes:** hoax disputes are decided by the operator in v1.
 4. **Outcomes:** Solana deploys are attested by the operator's oracle; grants are attested by the buyer.
-5. **Arcium:** MPC trust rests on the Arcium node operators. Development uses localnet.
-6. **Stake amounts** per position are public, because USDC transfers are public. *Which team* a position supports stays encrypted.
-7. Stake-wallet funding is traceable. Shielded funding is planned for v2.
+5. **Arcium:** MPC trust rests on the Arcium node operators (devnet cluster 456).
+6. **Signal view:** buyers' per-option scores are assembled by the server from public position weights and the reasons it holds; computing them inside MPC is planned (task D4).
+7. **Stake amounts** per position are public, because USDC transfers are public. *Which team* a position supports stays encrypted.
+8. Stake-wallet funding is traceable. Shielded funding is planned for v2.
 
 ## References and disclosure
 

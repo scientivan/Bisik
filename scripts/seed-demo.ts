@@ -5,6 +5,8 @@
  *   pnpm --filter @bisik/scripts seed bids <id>  # demo buyers place sealed bids (market in Auction)
  *   pnpm --filter @bisik/scripts seed select <id> ecosystem-a 0   # winner hides options (in rank order)
  *   pnpm --filter @bisik/scripts seed buyflat <id> ecosystem-c    # flat purchase of the remainder
+ *   pnpm --filter @bisik/scripts seed claim <id> ayu 1            # scout claims to a fresh address
+ *   SEED_ONLY_AUCTION=1 … seed                                    # only create the auction market
  *
  * Needs: program deployed (localnet via `arcium localnet`, or devnet), the API server running
  * with BISIK_DEMO=1, and the operator keypair at OPERATOR_KEYPAIR_PATH.
@@ -29,7 +31,7 @@ import {
   uploadCircuit,
 } from "@arcium-hq/client";
 import { makeProvider, program as mkProgram, pdas, PROGRAM_ID, CIRCUITS, arciumAccounts, queueAndWait, encryptForMxe, fetchMxeKey, computeBudget, anchor, Status } from "@bisik/sdk";
-import { buildGroup, proveStake } from "@bisik/zk";
+import { buildGroup, proveStake, proveClaim } from "@bisik/zk";
 import { keccak, utf8, Tier, fromHex } from "@bisik/shared";
 
 dotenv.config({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
@@ -197,7 +199,8 @@ async function setup() {
   const opTok = await ata(operator.publicKey);
   await mintTo(conn, operator, mint, opTok, operator, 10_000e6);
   st.markets = st.markets ?? [];
-  for (const spec of MARKETS) {
+  const specs = process.env.SEED_ONLY_AUCTION === "1" ? MARKETS.filter((m) => m.kind === 1) : MARKETS;
+  for (const spec of specs) {
     const cfgNow = await program.account.config.fetch(P.config());
     const id = Number(cfgNow.marketCount);
     const market = P.market(id);
@@ -309,6 +312,33 @@ async function bids(id: number) {
   }
 }
 
+/** A scout claims stake + payout to a brand-new address by proving ownership of the position (F10). */
+async function claim(id: number, scoutName: string, slot: number) {
+  const names = ["ayu", "bima", "citra", "dewa", "eka"];
+  const identity = SCOUTS[names.indexOf(scoutName)];
+  if (!identity) throw new Error(`unknown scout ${scoutName}`);
+  const market = P.market(id);
+  const mint = (await program.account.config.fetch(P.config())).usdcMint;
+  const positions = await program.account.position.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
+  const recipient = Keypair.generate();
+  const recTok = (await getOrCreateAssociatedTokenAccount(conn, operator, mint, recipient.publicKey, true)).address;
+  for (const pos of positions) {
+    const leaves: string[] = (await api(`/v1/groups/${pos.account.tier}/${pos.account.epoch}`)).leaves;
+    const { solana } = await proveClaim({ identity, group: buildGroup(leaves), marketId: BigInt(id), slot, recipient: recipient.publicKey.toBytes() });
+    if (!Buffer.from(solana.nullifier).equals(Buffer.from(pos.account.nullifier))) continue;
+    await rpc(
+      program.methods
+        .claim(Array.from(solana.proof), Array.from(pos.account.root))
+        .accounts({ payer: operator.publicKey, market, position: pos.publicKey, recipientToken: recTok, escrow: P.escrow(market), tokenProgram: TOKEN_PROGRAM_ID })
+        .preInstructions([computeBudget()]),
+    );
+    const bal = await conn.getTokenAccountBalance(recTok);
+    log(`${scoutName} claimed ${bal.value.uiAmountString} USDC (stake ${Number(pos.account.amount) / 1e6} + payout ${Number(pos.account.payout) / 1e6}) to fresh address ${recipient.publicKey.toBase58()}`);
+    return;
+  }
+  throw new Error(`no position for ${scoutName} slot ${slot} in market ${id}`);
+}
+
 /** Winner of rank `rank` hides `options` (comma list), or the flat buyer joins. */
 async function select(id: number, name: string, options: number[]) {
   const buyer = demoKeypair(`buyer-${name}`);
@@ -331,7 +361,9 @@ const [cmd, arg, arg2, arg3] = process.argv.slice(2);
     ? select(Number(arg), arg2, (arg3 ?? "").split(",").filter(Boolean).map(Number))
     : cmd === "buyflat"
       ? buyFlat(Number(arg), arg2)
-      : setup())
+      : cmd === "claim"
+        ? claim(Number(arg), arg2, Number(arg3 ?? 1))
+        : setup())
   .then(() => process.exit(0))
   .catch((e) => {
     console.error("SEED FAILED:", e);
