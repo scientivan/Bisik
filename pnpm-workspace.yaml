@@ -4,3 +4,4 @@ packages:
   - "services/*"
   - "contracts"
   - scripts
+  - scripts/browser-proof

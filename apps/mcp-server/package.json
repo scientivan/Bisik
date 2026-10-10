@@ -1,0 +1,19 @@
+{
+  "name": "@bisik/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server (stdio) that lets an AI agent read Bisik markets and act as a logged-in buyer. No fund-moving tools.",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc -p . --noEmit",
+    "test": "tsx --test src/*.test.ts"
+  },
+  "dependencies": {
+    "@bisik/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@noble/curves": "^1.7.0",
+    "@solana/web3.js": "^1.98.0",
+    "zod": "^3.25.0"
+  }
+}

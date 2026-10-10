@@ -2,7 +2,7 @@
 
 **Private, stake-backed insider signals for blockchain ecosystems competing for the best builder teams.**
 
-*Bisik* is Indonesian for "whisper". Insiders (hackathon judges, mentors, developers) quietly flag promising teams that have not yet committed to a chain. Ecosystems buy those signals, can bid for exclusivity, and pay the insiders **only when a team actually ships on the buyer's chain**.
+*Bisik* is Indonesian for "whisper". Insiders (hackathon judges, mentors, developers) quietly flag promising teams that have not yet committed to a chain. Ecosystems buy those signals, can bid for exclusivity, and pay the insiders **according to outcomes**: a buyer's payment goes to the scouts behind the teams that shipped on the buyer's chain or won its grant (if the buyer reports none, a default rule picks the strongest signal they bought).
 
 > Status: hackathon build for the Colosseum Crypto World's Fair (Solana track). The on-chain program, MPC circuits, ZK identity, Veritas module, API server and keeper are implemented. The end-to-end test passes on the Arcium localnet, and the program runs on **Solana devnet with Arcium MPC (cluster 456, Arcium 0.15.0)**. The frontend is in progress.
 

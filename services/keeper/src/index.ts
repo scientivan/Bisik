@@ -154,6 +154,28 @@ async function step(pubkey: PublicKey, m: any): Promise<string | null> {
   return null;
 }
 
+/**
+ * D6: after settlement, fold each position's hit/miss into the encrypted reputation table.
+ * Skipped when the reputation account is not initialized (e.g. a deployment without D6).
+ * One computation per tick to stay gentle on public RPCs.
+ */
+async function creditReputation(market: PublicKey): Promise<void> {
+  const rep = P.reputation();
+  const r: any = await program.account.reputation.fetchNullable(rep);
+  if (!r || !r.ready || r.busy) return;
+  const ps = await program.account.position.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
+  for (const p of ps) {
+    if (!p.account.settled) continue;
+    const repCredit = P.repCredit(p.publicKey);
+    if (await conn.getAccountInfo(repCredit, "confirmed")) continue;
+    await queue("credit_reputation", (o) =>
+      program.methods.creditReputation(o).accountsPartial({ payer: operator.publicKey, market, position: p.publicKey, rep, repCredit, ...arc(o, "credit_reputation") }),
+    );
+    log(`market ${(await program.account.market.fetch(market)).id} [Settled] → credit_reputation`);
+    return;
+  }
+}
+
 async function tick() {
   const markets = await program.account.market.all();
   for (const { publicKey, account } of markets) {
@@ -167,6 +189,7 @@ async function tick() {
           log(`market ${account.id} withdraw_fees error: ${String(e?.message ?? e).slice(0, 160)}`);
         }
       }
+      await creditReputation(publicKey).catch((e) => log(`market ${account.id} credit_reputation error: ${String(e?.message ?? e).slice(0, 160)}`));
       continue;
     }
     try {

@@ -15,6 +15,8 @@ export interface Chain {
   recordOutcome(marketId: number, buyerIndex: number, option: number, kind: number, evidence: Uint8Array): Promise<string>;
   findDeploys(wallet: PublicKey, sinceUnix: number): Promise<string[]>;
   setDefaultOutcome(marketId: number, buyerIndex: number, option: number): Promise<string>;
+  /** D4: the buyer's stored signal view (ciphertext encrypted to the buyer's x25519 key). */
+  fetchSignalReveal?(marketId: number, buyer: PublicKey): Promise<any | null>;
 }
 
 export function solanaChain(rpcUrl: string, keypairPath: string): Chain {
@@ -38,6 +40,13 @@ export function solanaChain(rpcUrl: string, keypairPath: string): Chain {
       const market = P.market(id);
       const all = await program.account.position.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
       return all.map((a: any) => ({ pubkey: a.publicKey, ...a.account }));
+    },
+    fetchSignalReveal: async (id, buyer) => {
+      try {
+        return (await program.account.signalReveal.fetchNullable(P.signals(P.market(id), buyer))) as any;
+      } catch {
+        return null; // program build without D4
+      }
     },
     fetchOption: async (id, index) => (await program.account.optionEntry.fetchNullable(P.option(P.market(id), index))) as any,
     recordOutcome: (id, bi, opt, kind, ev) =>

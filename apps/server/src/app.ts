@@ -8,7 +8,7 @@ import { PublicKey } from "@solana/web3.js";
 import { randomUUID } from "node:crypto";
 import { keccak, utf8, toHex, fromHex, be32, Tier, TIER_NAMES, type SignalOption } from "@bisik/shared";
 import { Veritas, sybilHints } from "@bisik/veritas";
-import { visibleMask, STATUS_NAMES } from "@bisik/sdk";
+import { visibleMask, STATUS_NAMES, signalRevealToJson } from "@bisik/sdk";
 import type { DB } from "./db.js";
 import type { Chain } from "./chain.js";
 import { seal, open } from "./sealed.js";
@@ -180,7 +180,10 @@ export function createApp(d: Deps) {
     if (bi < 0) return c.json({ error: "no allocation for this buyer" }, 403);
     const mask = visibleMask({ optionCount: m.optionCount, kind: m.kind, buyers: m.buyers, winners: m.winners, hidden: m.hidden }, bi);
     const signals = await buildSignals(id, m.optionCount, mask);
-    return c.json({ buyerIndex: bi, visibleMask: mask, options: signals });
+    // D4: MPC-computed weights encrypted to the buyer's own x25519 key (null until the buyer
+    // calls `reveal_signals`). Only the buyer's secret key decrypts it (`decryptSignals`).
+    const reveal = d.chain.fetchSignalReveal ? await d.chain.fetchSignalReveal(id, new PublicKey(who)) : null;
+    return c.json({ buyerIndex: bi, visibleMask: mask, options: signals, encryptedSignals: signalRevealToJson(reveal) });
   });
 
   /**
@@ -296,6 +299,8 @@ export function createApp(d: Deps) {
 
   // ── outcomes (F7) ──
   app.post("/v1/outcomes/check", async (c) => {
+    // Can trigger an operator-signed transaction, so only logged-in buyers may call it.
+    if (!authed(c)) return c.json({ error: "login required" }, 401);
     if (!d.chain) return c.json({ error: "chain not configured" }, 503);
     const { marketId, optionIndex, buyerIndex } = await c.req.json();
     const m = await d.chain.fetchMarket(Number(marketId));

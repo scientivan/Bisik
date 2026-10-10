@@ -1,6 +1,6 @@
 # Bisik: Task Tracker, Rencana Build, dan Spesifikasi Antarmuka
 
-> **Versi 1.3 · diperbarui Sabtu 10 Oktober 2026, 18:30 WIB · pemilik: Dien (keputusan) dan agent (eksekusi)**
+> **Versi 1.4 · diperbarui Sabtu 10 Oktober 2026, 20:00 WIB · pemilik: Dien (keputusan) dan agent (eksekusi)**
 >
 > Dokumen hidup. Dokumen ini satu-satunya tempat status pengerjaan Bisik. Setiap kali ada task yang dimulai, selesai, gagal, atau berubah, perbarui status task di bagian 8 dan tambahkan baris di **Progress Log** (bagian 15).
 >
@@ -176,7 +176,7 @@ Semua path relatif terhadap folder `Bisik/`.
 - ✅ **Devnet live (A6/H3):** program `aFNfbxfgBuQ6tr5qXDpTmTWrQ8hjLGYNEtdp2L7HjvD` + MXE di cluster Arcium **456**, Arcium **0.15.0**. Circuit di repo publik `scientivan/bisik-circuits` (URL raw dipin ke commit `a86729c`). Seed demo devnet sukses (mint mock USDC `F1uGxYkPfypwni9tfLDSCanFX5dN1nDhPSz7izFEWR37`).
 - ❌ Frontend (fase G), termasuk pembuatan bukti di browser (B4). Dikerjakan terakhir sesuai permintaan Dien.
 - ❌ Uji live Reclaim dengan akun GitHub asli (R23). Butuh server di URL publik (I3) atau tunnel.
-- ⏸ D4 (`reveal_signals` lewat MPC, P1) dan D6 (reputasi terenkripsi, P2) ditunda. Sinyal pembeli sekarang dihitung server dari bobot posisi publik + alasan (asumsi kepercayaan Veritas, sudah diungkap di README).
+- ✅ D4 (`reveal_signals`) dan D6 (reputasi terenkripsi) lulus di localnet. ❌ **Belum di devnet**: upgrade butuh ±13 SOL di puncak (program jadi 1.597.016 byte), saldo operator 6,31 SOL.
 - ❌ Video, project di Arena, naskah demo.
 
 ### 3.3 Lingkungan
@@ -227,6 +227,18 @@ Semua path relatif terhadap folder `Bisik/`.
 - **zkey Semaphore (B5):** artefak dari `privacy-scaling-explorations/snark-artifacts` (lisensi MIT), hasil ceremony phase-2 Semaphore V4 lewat ceremony.pse.dev. Versi 4.13.0, sha256 `33f9a067…` dipin di `scripts/gen-vk.mjs`. Jumlah kontributor ceremony belum terverifikasi.
 - **Disk:** ~4 GiB setelah membersihkan clone rujukan, image Arcium 0.13.2, dan cache debug (izin Dien).
 - **`.env` sekarang mengarah ke devnet** (`SOLANA_RPC_URL`, `ARCIUM_CLUSTER_OFFSET=456`, `SERVER_DB_PATH=./data/devnet.sqlite`). Untuk localnet, timpa lewat variabel lingkungan saat menjalankan.
+
+### 3.5 D4/D6 (hasil subagent, diverifikasi root dari log)
+
+- **D4 `reveal_signals(offset, buyer_x25519)`**: MPC mengenkripsi bobot per opsi yang boleh dilihat pembeli ke kunci x25519 milik pembeli; disimpan di akun `SignalReveal` `["signals", market, buyer]`. Server mengembalikan `encryptedSignals` di endpoint sinyal; SDK `decryptSignals`. Bukan pembeli ditolak.
+- **D6**: `init_reputation` (operator), `credit_reputation` (siapa pun, posisi harus settled, sekali per posisi lewat `RepCredit`), `epoch_tiers` (operator, sekali per epoch; daftar diurutkan di MPC). Tabel `Reputation` `["rep"]` 32 slot, counter maks 255. Kunci = 64 bit bawah komitmen C, dibuka hanya di MPC.
+- **Syarat stake baru:** opsi dan kredit dienkripsi dengan **kunci x25519 yang sama** (`encryptStakeSecrets` di SDK). Seed sudah diperbaiki. Posisi devnet lama (dibuat sebelum perbaikan) tidak bisa dikredit.
+- **Latensi localnet:** reveal_signals 3,7 dtk, init_rep 12,6, credit_reputation 3,5, epoch_tiers 4,5.
+- **Keputusan untuk Dien (usulan agent, belum dikunci):**
+  1. Aturan level: 0 = turun satu tier (ada hoax terbukti, atau ≥2 meleset tanpa tepat); 1 = tetap; 2 = naik satu (≥1 tepat dan tepat ≥ meleset); 3 = naik dua (≥3 tepat dan tepat ≥ 2× meleset). Tier epoch berikut = clamp(tier impor + level − 1).
+  2. Kapasitas tabel 32 scout (batas callback satu transaksi). Scout ke-33 tidak tercatat.
+  3. "Tepat" = opsi ada di mask sukses pembeli mana pun (dihitung sekali).
+- **Risiko yang tersisa (inferensi agent):** bukti Semaphore tidak membuktikan bahwa plaintext kredit = C milik pembukti, jadi pelaku hoax bisa mengarahkan penalti ke C orang lain (perlu circuit ZK khusus). Keterkaitan lewat perubahan tier antar-epoch masih mungkin bila scout sedikit (living doc 8.3).
 
 ## 4. Timeline dan milestone
 
@@ -592,7 +604,7 @@ Format: **ID · judul · prioritas · pemilik · dependensi.** Lalu langkah, dan
 - [x] **B3 · Verifikasi di program · P0 · agent · B2**
   - `zk/verify.rs`: `verify_semaphore(proof, root, nullifier, message, scope)` dengan `groth16-solana` 0.2.0 dan `field_hash` berbasis keccak.
   - **Selesai bila:** tes LiteSVM: bukti valid lolos, nullifier/root/message yang diubah ditolak, CU < 120 ribu.
-- [ ] **B4 · Pembuatan bukti di browser · P0 · agent · B1, G1**
+- [~] **B4 · Pembuatan bukti di browser · P0 · agent · B1, G1**
   - Muat `semaphore-20.wasm` dan `.zkey` di Vite: aset lokal di `public/` atau unduh dari snark-artifacts. Ukur waktunya.
   - **Selesai bila:** bukti dibuat di Chrome/Safari dalam < 10 detik. Kalau gagal, jalankan cadangan B4 (bagian 12).
 - [x] **B5 · Cek lisensi dan asal-usul artefak zkey · P1 · agent · –**
@@ -650,11 +662,11 @@ Format: **ID · judul · prioritas · pemilik · dependensi.** Lalu langkah, dan
 - [x] **D3 · Lelang top-3 + `resolve_auction` GSP · P0 · agent · A2**
   - Tulis sendiri dengan contoh Vickrey sebagai rujukan. Ikat penawar ke signer (keterbatasan contoh).
   - **Selesai bila:** tes 3–4 penawar: pemenang dan harga sesuai rumus, harga cadangan ditegakkan.
-- [⏸] **D4 · `reveal_signals` ke kunci pembeli · P1 · agent · D2**
+- [x] **D4 · `reveal_signals` ke kunci pembeli · P1 · agent · D2**
   - **Selesai bila:** pembeli mendekripsi skor opsi yang diizinkan saja.
 - [x] **D5 · `compute_payout` · P0 · agent · D1**
   - **Selesai bila:** payout per posisi cocok dengan perhitungan referensi TypeScript (toleransi 1 base unit).
-- [⏸] **D6 · `credit_reputation` + `epoch_tiers` · P2 · agent · D5**
+- [x] **D6 · `credit_reputation` + `epoch_tiers` · P2 · agent · D5**
   - **Selesai bila:** tier scout naik setelah hasil sukses di epoch berikutnya.
 - [x] **D7 · Ukur latensi · P1 · agent · D1–D5**
   - Catat detik per circuit di localnet. Hasilnya dipakai untuk menyusun naskah demo.
@@ -756,7 +768,7 @@ Format: **ID · judul · prioritas · pemilik · dependensi.** Lalu langkah, dan
 - [ ] **J4 · Rekam video demo ≤ 3 menit · P0 · Dien (agent menyiapkan skrip dan data) · J3, H2**
 - [ ] **J5 · Video pitch 2–3 menit · P0 · Dien · J6**
   - Buka dengan pengguna dan masalah, bukan produk.
-- [ ] **J6 · Bagian GTM + validasi permintaan · P0 · agent · K4**
+- [~] **J6 · Bagian GTM + validasi permintaan · P0 · agent · K4**
   - Angka outreach apa adanya, termasuk penolakan (memo 113).
 - [ ] **J7 · Ubah repo ke public · P0 · Dien · J2**
 - [ ] **J8 · Isi dan kirim form submission · P0 · Dien · J1–J7**
@@ -905,7 +917,24 @@ Hanya ditambah, jangan dihapus. Format: `waktu WIB · siapa · apa · bukti/path
 - 2026-10-10 18:20 · agent · Upgrade ke Arcium 0.15.0 tanpa perubahan kode. `arcium test` LULUS lagi; latensi MPC localnet 2,8–3,9 dtk · `../Ideation-Colosseum/spikes/bisik-e2e5.log`
 - 2026-10-10 18:25 · agent · Program devnet di-upgrade (hash onchain = build lokal `2ed56b58…`), MXE devnet selesai (recovery material) · tx `51481H5j…`
 - 2026-10-10 18:25 · Dien + agent · Circuit dihosting di repo publik baru `scientivan/bisik-circuits` (hanya .arcis, bukan source), URL raw dipin ke commit `a86729c`. Hash file cocok dengan build lokal
-- 2026-10-10 18:30 · agent · Seed demo di devnet sukses: comp def offchain, config, grup Gold 5 anggota, 3 pembeli, 2 market, 6 stake anonim. MPC devnet berjalan (alokasi ±4–20 dtk). Keeper devnet sedang menjalankan siklus penuh
+- 2026-10-10 18:30 · agent · Seed demo di devnet sukses: comp def offchain, config, grup Gold 5 anggota, 3 pembeli, 2 market, 6 stake anonim. MPC devnet berjalan (alokasi ±4–20 dtk). Keeper devnet menjalankan siklus penuh (lulus, lihat 19:35)
+
+- 2026-10-10 19:10 · Dien · Meminta sisa pekerjaan non-frontend dikerjakan paralel dengan beberapa sesi
+- 2026-10-10 19:10 · agent · 4 subagent paralel dimulai: (1) D4 `reveal_signals` + D6 reputasi terenkripsi, uji localnet, tanpa deploy devnet karena SOL kurang untuk buffer upgrade; (2) B4 bukti Semaphore di browser + `docs/browser-proving.md`; (3) J6 draf `docs/gtm-and-demand.md`; (4) D-24 `apps/mcp-server`. Root memantau uji siklus penuh devnet (market 2) dan satu-satunya penulis tracker serta commit
+
+- 2026-10-10 19:15 · subagent · J6 draf `docs/gtm-and-demand.md` (Inggris, ±1.940 kata, label Fakta/Inferensi/Rencana). Sumber diverifikasi ulang: Retro9000, Metis, MegaMafia, Base Batches, Scout Game, Colosseum FAQ. Tabel hasil K4 masih `_TBD_` (menunggu data outreach Dien) · J6 tetap [~]
+- 2026-10-10 19:15 · agent · Temuan J6: klaim "scout dibayar hanya kalau tim ship" tidak tepat. Bayaran pembeli tidak bisa di-refund, dan default D-05 memberikannya ke sinyal terkuat. README dikoreksi; `important_for_demo.md` diberi peringatan. **Framing pitch = keputusan Dien**
+
+- 2026-10-10 19:20 · subagent · D-24 `apps/mcp-server` (MCP stdio, 9 tool: health, list_markets, get_market, get_group, buyer_login, get_signals, request_introduction, get_introduction, check_outcome). Tidak ada tool yang memindahkan dana atau memakai kunci operator; `.env` root tidak dimuat. Smoke test 8/8 lulus terhadap API devnet · `apps/mcp-server/README.md`
+- 2026-10-10 19:20 · agent · Catatan: `POST /v1/outcomes/check` belum butuh login, padahal bisa memicu transaksi operator. Diperbaiki setelah agent D4/D6 selesai menyentuh `apps/server/src/app.ts`
+
+- 2026-10-10 19:30 · subagent · B4 (Chrome) lulus: bukti stake/klaim Semaphore depth 20 di headless Chrome 0,55–0,85 dtk; byte bukti Solana identik dengan Node; cross-check 19/19. Artefak wasm/zkey di-self-host dengan pin sha256 (zkey `33f9a067…`, sama dengan VK onchain), tidak di-commit; frontend perlu langkah `fetch-artifacts` sebelum `vite build`. Safari belum diuji, jadi B4 tetap [~] · `docs/browser-proving.md`, `scripts/browser-proof/`
+
+- 2026-10-10 19:35 · agent · **Siklus penuh di devnet LULUS** (market 2, lelang): 4 stake anonim → alokasi MPC → preview → 3 tawaran tertutup → `resolve_auction` → refund tawaran → seleksi berurutan (A sembunyikan opsi 0, B opsi 1) → C beli flat → default outcome per pembeli → `compute_weights` → 4× `settle_position` → klaim ZK scout "ayu" 213,55 USDC (stake 100 + payout 113,55) ke alamat baru `ECdjg9Nd…`. Market 0 dan 1 juga Settled; fee market 1 ditarik keeper. Satu langkah MPC devnet ±15–20 dtk termasuk polling keeper. Saldo operator 6,31 SOL · log `tmp/devnet-run.log`, `tmp/keeper-dev.log` (lokal)
+
+- 2026-10-10 20:00 · subagent + agent · D4 + D6 selesai di localnet: `arcium test` LULUS dengan asersi baru (3 pembeli mendekripsi tampilan masing-masing dan cocok dengan bobot onchain; 4 posisi dikredit, kredit ganda ditolak; tier epoch 2 = 1,2,2,2,2; reveal kedua per epoch ditolak). Root memverifikasi log · `../Ideation-Colosseum/spikes/bisik-e2e-d4d6.log`
+- 2026-10-10 20:00 · agent · Integrasi: seed memakai `encryptStakeSecrets` (satu kunci untuk opsi + kredit) dan opsi `SEED_V2=1` (comp def D4/D6 + init reputasi); keeper memanggil `credit_reputation` setelah settlement bila tabel siap; `POST /v1/outcomes/check` kini wajib login; MCP mengirim token. Tes: server 7/7, zk 2/2, shared 4/4, veritas 5/5; semua paket typecheck
+- 2026-10-10 20:00 · agent · Devnet belum di-upgrade ke D4/D6: perlu ±13 SOL di puncak (perpanjang ±287 KB ≈ 2 SOL + buffer 1,6 MB ≈ 11 SOL yang kembali), saldo 6,31 SOL · menunggu Dien
 
 ---
 

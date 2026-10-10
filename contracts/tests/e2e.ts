@@ -7,6 +7,10 @@
  *  - Winner #1 hides option 0, winner #2 hides option 1, the loser buys the rest flat.
  *  - Outcomes recorded per buyer; one hoax dispute upheld (stake to charity).
  *  - Settlement via MPC; a scout claims stake + payout to a fresh address with a ZK proof.
+ *  - D4: each buyer receives the weighted support of its visible options, encrypted to its own
+ *    x25519 key, and decrypts it locally.
+ *  - D6: every settled position is credited to its secret scout inside MPC; the end-of-epoch
+ *    reveal lists only (commitment tag, tier level), sorted, never which position is whose.
  *
  * Run: `arcium test` (Anchor.toml points the test script at this file).
  */
@@ -48,6 +52,7 @@ import assert from "node:assert/strict";
 import { Identity } from "@semaphore-protocol/identity";
 import { buildGroup, proveStake, proveClaim } from "@bisik/zk";
 import { keccak, utf8, be32, Tier } from "@bisik/shared";
+import { decryptSignals, decodeEpochTiers, applyRepLevel, repTag, signalRevealToJson } from "../../packages/sdk/dist/index.js"; // workspace sdk (D4/D6 helpers), not a declared dep of contracts
 
 const idl = JSON.parse(fs.readFileSync(new URL("../target/idl/bisik.json", import.meta.url), "utf8"));
 const CIRCUITS = [
@@ -59,6 +64,10 @@ const CIRCUITS = [
   "resolve_auction",
   "winning_weights",
   "position_hits",
+  "reveal_signals",
+  "init_rep",
+  "credit_reputation",
+  "epoch_tiers",
 ] as const;
 const USDC = (x: number) => new anchor.BN(Math.round(x * 1e6));
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -190,6 +199,21 @@ async function main() {
     .signers([admin])
     .rpc({ commitment: "confirmed", skipPreflight: true });
   log("config initialized (demo mode)");
+
+  // D6: global encrypted reputation table (operator only)
+  const repPda = pda(seed("rep"));
+  await assert.rejects(
+    (async () => {
+      const intruder = Keypair.generate();
+      await fund(intruder, 1);
+      const o = new anchor.BN(randomBytes(8), "hex");
+      await program.methods.initReputation(o).accountsPartial({ payer: intruder.publicKey, config: configPda, rep: repPda, ...arciumAccs(o, "init_rep") }).signers([intruder]).rpc({ commitment: "confirmed" });
+    })(),
+    "non-operator cannot create the reputation table",
+  );
+  await queue("init_rep", (o) => program.methods.initReputation(o).accountsPartial({ payer: admin.publicKey, config: configPda, rep: repPda, ...arciumAccs(o, "init_rep") }), [admin]);
+  assert.ok(((await program.account.reputation.fetch(repPda)) as any).ready, "reputation table ready");
+  log("encrypted reputation table initialized");
 
   // ── 2. Anonymous Gold group (5 identities) + source nullifiers ──
   const ids = ["a", "b", "c", "d", "e"].map((s) => new Identity(`bisik-demo-scout-${s}`));
@@ -448,6 +472,49 @@ async function main() {
     .rpc({ commitment: "confirmed", skipPreflight: true });
   log("selection order enforced; flat buyer joined");
 
+  // ── 8b. D4: signals encrypted to each buyer's own key ──
+  {
+    const allPos: any[] = await Promise.all(positions.map((p) => program.account.position.fetch(p.pda)));
+    const expected = (mask: number) =>
+      Array.from({ length: 16 }, (_, i) =>
+        mask & (1 << i) ? positions.reduce((s, p, k) => s + (p.s.option === i ? BigInt(allPos[k].weight.toString()) : 0n), 0n) : 0n,
+      );
+    // a non-buyer cannot request a view
+    await assert.rejects(
+      (async () => {
+        const o = new anchor.BN(randomBytes(8), "hex");
+        await program.methods
+          .revealSignals(o, Array.from(x25519.getPublicKey(x25519.utils.randomSecretKey())))
+          .accountsPartial({ payer: admin.publicKey, market, agg, signals: pda(seed("signals"), market.toBuffer(), admin.publicKey.toBuffer()), ...arciumAccs(o, "reveal_signals") })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" });
+      })(),
+      "non-buyer rejected",
+    );
+    const masks = [0b111, 0b110, 0b100]; // #1 sees all; #2 all but #1's hidden {0}; flat sees {2}
+    for (let b = 0; b < 3; b++) {
+      const sk = x25519.utils.randomSecretKey();
+      const pk = x25519.getPublicKey(sk);
+      const sig = pda(seed("signals"), market.toBuffer(), buyers[b].publicKey.toBuffer());
+      await queue(
+        "reveal_signals",
+        (o) => program.methods.revealSignals(o, Array.from(pk)).accountsPartial({ payer: buyers[b].publicKey, market, agg, signals: sig, ...arciumAccs(o, "reveal_signals") }),
+        [buyers[b]],
+      );
+      const acc: any = await program.account.signalReveal.fetch(sig);
+      assert.ok(acc.ready, "signal view ready");
+      assert.equal(acc.mask, masks[b], `visible mask buyer ${b}`);
+      assert.deepEqual(Array.from(acc.encPubkey), Array.from(pk), "encrypted to the buyer's key");
+      const json = signalRevealToJson(acc)!; // the shape the server exposes
+      const got = decryptSignals(json, sk, mxeKey!);
+      assert.deepEqual(got, expected(masks[b]), `buyer ${b} decrypts exactly its visible weights`);
+      // another key cannot read it
+      const wrong = decryptSignals(json, x25519.utils.randomSecretKey(), mxeKey!);
+      assert.notDeepEqual(wrong, got);
+      log(`D4 buyer ${b}: mask ${masks[b].toString(2).padStart(3, "0")} → weights [${got.slice(0, 3).map(String).join(", ")}] (decrypted locally)`);
+    }
+  }
+
   m = await program.account.market.fetch(market);
   await waitUntil(m.selectionDeadline.toNumber(), "selection deadline");
   await program.methods.openOutcomeWindow().accounts({ signer: admin.publicKey, market }).signers([admin]).rpc({ commitment: "confirmed", skipPreflight: true });
@@ -527,6 +594,72 @@ async function main() {
     .rpc({ commitment: "confirmed", skipPreflight: true });
   assert.equal(Number((await getAccount(conn, treasury)).amount), 61.5e6, "15% of 410");
   log("platform fee withdrawn: 61.5 USDC");
+
+  // ── 12. D6: private reputation → tiers for the next epoch ──
+  {
+    for (const p of positions) {
+      await queue(
+        "credit_reputation",
+        (o) =>
+          program.methods
+            .creditReputation(o)
+            .accountsPartial({ payer: admin.publicKey, market, position: p.pda, rep: repPda, repCredit: pda(seed("repc"), p.pda.toBuffer()), ...arciumAccs(o, "credit_reputation") }),
+        [admin],
+      );
+    }
+    // a position is credited at most once
+    await assert.rejects(
+      (async () => {
+        const o = new anchor.BN(randomBytes(8), "hex");
+        await program.methods
+          .creditReputation(o)
+          .accountsPartial({ payer: admin.publicKey, market, position: positions[0].pda, rep: repPda, repCredit: pda(seed("repc"), positions[0].pda.toBuffer()), ...arciumAccs(o, "credit_reputation") })
+          .signers([admin])
+          .rpc({ commitment: "confirmed" });
+      })(),
+      "double credit rejected",
+    );
+    let rep: any = await program.account.reputation.fetch(repPda);
+    assert.equal(rep.credits.toNumber(), 4, "4 positions credited");
+    log("D6: 4 settled positions credited to their secret scouts (nothing revealed)");
+
+    await queue("epoch_tiers", (o) => program.methods.epochTiers(o).accountsPartial({ payer: admin.publicKey, config: configPda, rep: repPda, ...arciumAccs(o, "epoch_tiers") }), [admin]);
+    rep = await program.account.reputation.fetch(repPda);
+    assert.ok(rep.tiersReady && rep.tiersEpoch === 2, "tiers revealed for epoch 2");
+    const entries: bigint[] = rep.tiers.map((x: any) => BigInt(x.toString()));
+    const sorted = [...entries].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    assert.deepEqual(entries, sorted, "revealed list is sorted (no insertion order)");
+    assert.equal(entries.filter((e) => e !== 0n).length, 3, "3 distinct scouts credited");
+    const tiers = decodeEpochTiers(entries, ids.map((i) => i.commitment));
+    // scout a: one hit + one upheld hoax → down; b, c: one hit each → up; d, e: no record
+    assert.deepEqual(tiers.map((t) => t.level), [0, 2, 2, 1, 1], "levels per scout");
+    assert.deepEqual(tiers.map((t) => t.credited), [true, true, true, false, false]);
+    for (const e of entries) if (e !== 0n) assert.ok(ids.some((i) => repTag(i.commitment) === ((e >> 8n) << 8n)), "every tag maps to a public leaf");
+    // second reveal in the same epoch is rejected (limits linkage from repeated reveals)
+    await assert.rejects(
+      (async () => {
+        const o = new anchor.BN(randomBytes(8), "hex");
+        await program.methods.epochTiers(o).accountsPartial({ payer: admin.publicKey, config: configPda, rep: repPda, ...arciumAccs(o, "epoch_tiers") }).signers([admin]).rpc({ commitment: "confirmed" });
+      })(),
+      "one reveal per epoch",
+    );
+    // Next-epoch groups: effective tier = imported tier shifted by the level.
+    const imported = [Tier.Gold, Tier.Silver, Tier.Gold, Tier.Gold, Tier.Gold]; // b onboarded as Silver (illustrative)
+    const next = tiers.map((t, k) => applyRepLevel(imported[k], t.level));
+    assert.equal(next[0], Tier.Silver, "scout a drops Gold → Silver after an upheld hoax");
+    assert.equal(next[1], Tier.Gold, "scout b rises Silver → Gold after a successful outcome");
+    await program.methods.rotateEpoch().accounts({ operator: admin.publicKey, config: configPda }).signers([admin]).rpc({ commitment: "confirmed", skipPreflight: true });
+    for (const tier of [Tier.Silver, Tier.Gold]) {
+      const members = ids.filter((_, k) => next[k] === tier);
+      const g = buildGroup(members.map((i) => i.commitment));
+      await program.methods
+        .publishGroupRoot(tier, 2, Array.from(be32(g.root)), g.size)
+        .accounts({ operator: admin.publicKey, config: configPda, group: pda(seed("group"), Buffer.from([tier]), u32le(2)) })
+        .signers([admin])
+        .rpc({ commitment: "confirmed", skipPreflight: true });
+    }
+    log(`D6 epoch 2: levels ${tiers.map((t) => t.level).join(",")} → tiers ${next.join(",")} (0=Bronze,2=Gold); new group roots published`);
+  }
 
   console.log("\nMPC latency per circuit (seconds):");
   for (const [k, v] of Object.entries(timings)) {

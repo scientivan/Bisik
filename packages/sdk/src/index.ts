@@ -30,7 +30,12 @@ export const Status = { Open: 0, Closed: 1, Auction: 2, Allocated: 3, Outcome: 4
 export const STATUS_NAMES = ["Open", "Closed", "Auction", "Allocated", "OutcomeWindow", "Settling", "Settled"];
 export const Kind = { Exclusive: 0, Auction: 1 } as const;
 export const CIRCUITS = ["init_market_agg", "allocate", "preview", "init_auction", "place_bid", "resolve_auction", "winning_weights", "position_hits"] as const;
-export type Circuit = (typeof CIRCUITS)[number];
+/**
+ * D4/D6 circuits. Kept separate from `CIRCUITS` so existing setup scripts do not try to
+ * initialize them against a program build that predates them (devnet, 10 Oct).
+ */
+export const CIRCUITS_V2 = ["reveal_signals", "init_rep", "credit_reputation", "epoch_tiers"] as const;
+export type Circuit = (typeof CIRCUITS)[number] | (typeof CIRCUITS_V2)[number];
 
 const seed = (s: string) => Buffer.from(s);
 const le = (n: number | bigint, bytes: number) => {
@@ -57,6 +62,12 @@ export function pdas(programId: PublicKey = PROGRAM_ID) {
     bid: (market: PublicKey, buyer: PublicKey) => f(seed("bid"), market.toBuffer(), buyer.toBuffer()),
     outcome: (market: PublicKey, buyerIndex: number, option: number) => f(seed("outcome"), market.toBuffer(), Buffer.from([buyerIndex]), le(option, 2)),
     dispute: (market: PublicKey, nullifier: Uint8Array) => f(seed("dispute"), market.toBuffer(), Buffer.from(nullifier)),
+    /** D4: buyer's encrypted signal view. */
+    signals: (market: PublicKey, buyer: PublicKey) => f(seed("signals"), market.toBuffer(), buyer.toBuffer()),
+    /** D6: global encrypted reputation table. */
+    reputation: () => f(seed("rep")),
+    /** D6: per-position "already credited" marker. */
+    repCredit: (position: PublicKey) => f(seed("repc"), position.toBuffer()),
   };
 }
 
@@ -127,4 +138,106 @@ export function visibleMask(m: { optionCount: number; kind: number; buyers: Publ
   if (m.kind === Kind.Exclusive || (b.equals(m.winners[0]) && !isDefault(b))) return all;
   if (b.equals(m.winners[1]) && !isDefault(b)) return all & ~m.hidden[0] & 0xffff;
   return all & ~(m.hidden[0] | m.hidden[1]) & 0xffff;
+}
+
+// ───────────────────────────── D4: signals encrypted to the buyer ─────────────────────────────
+
+/** Onchain `SignalReveal` (as decoded by Anchor) or the JSON shape the server returns. */
+export interface EncryptedSignals {
+  mask: number;
+  encPubkey: Uint8Array | number[] | string;
+  nonce: bigint | string | { toString(): string };
+  ciphertexts: (Uint8Array | number[] | string)[];
+}
+
+const toBytes = (x: Uint8Array | number[] | string): Uint8Array =>
+  typeof x === "string" ? Uint8Array.from(Buffer.from(x.replace(/^0x/, ""), "hex")) : Uint8Array.from(x as ArrayLike<number>);
+
+/** u128 → 16 little-endian bytes (the nonce layout Rescue expects). */
+export function u128ToLE(n: bigint): Uint8Array {
+  const out = new Uint8Array(16);
+  let v = n;
+  for (let i = 0; i < 16; i++) {
+    out[i] = Number(v & 0xffn);
+    v >>= 8n;
+  }
+  return out;
+}
+
+/** Serialize a fetched `SignalReveal` account for an HTTP response (hex + decimal strings). */
+export function signalRevealToJson(acc: any) {
+  if (!acc || !acc.ready) return null;
+  return {
+    mask: acc.mask as number,
+    encPubkey: Buffer.from(acc.encPubkey).toString("hex"),
+    nonce: acc.nonce.toString(),
+    ciphertexts: (acc.ct as number[][]).map((c) => Buffer.from(c).toString("hex")),
+    revealedAt: Number(acc.revealedAt),
+  };
+}
+
+/**
+ * Decrypt the buyer's signal view with the buyer's x25519 secret key. Returns the weighted
+ * support per option (16 entries; options outside `mask` are 0).
+ */
+export function decryptSignals(s: EncryptedSignals, buyerSecretKey: Uint8Array, mxePublicKey: Uint8Array): bigint[] {
+  const cipher = new RescueCipher(x25519.getSharedSecret(buyerSecretKey, mxePublicKey));
+  const nonce = u128ToLE(BigInt(s.nonce.toString()));
+  return cipher.decrypt(s.ciphertexts.map((c) => Array.from(toBytes(c))), nonce);
+}
+
+/** Fresh x25519 keypair for a buyer's signal view. Keep `secretKey` client-side only. */
+export function newViewKey() {
+  const secretKey = x25519.utils.randomSecretKey();
+  return { secretKey, publicKey: x25519.getPublicKey(secretKey) };
+}
+
+// ───────────────────────────── D6: private reputation ─────────────────────────────
+
+/**
+ * Encrypt the option and the credit (identity commitment C) with ONE x25519 key, as `stake`
+ * expects: `Position` stores only `enc_pubkey`, so the MXE can open the credit in
+ * `credit_reputation` only if it shares the option's key (different nonces).
+ */
+export function encryptStakeSecrets(mxePublicKey: Uint8Array, option: number, commitment: bigint) {
+  const o = encryptForMxe(mxePublicKey, [BigInt(option)]);
+  const cnonce = new Uint8Array(16);
+  crypto.getRandomValues(cnonce);
+  const credit = o.cipher.encrypt([commitment], cnonce);
+  return {
+    pubkey: o.pubkey,
+    optionNonce: o.nonce,
+    optionNonceBN: o.nonceBN,
+    optionCt: o.ciphertexts[0],
+    creditNonce: cnonce,
+    creditNonceBN: new anchor.BN(deserializeLE(cnonce).toString()),
+    creditCt: credit[0],
+  };
+}
+
+/** Level semantics of `epoch_tiers`: 0 = one tier down, 1 = unchanged, 2 = +1, 3 = +2. */
+export const REP_LEVEL_NAMES = ["down", "unchanged", "up", "up2"] as const;
+
+/** Tag the MXE publishes for commitment C: low 64 bits of C with the low byte cleared. */
+export function repTag(commitment: bigint): bigint {
+  return (BigInt.asUintN(64, commitment) >> 8n) << 8n;
+}
+
+/**
+ * Map the revealed sorted `(tag | level)` list back to the public group leaves. Commitments
+ * without an entry have no internal reputation yet (level 1 = unchanged).
+ */
+export function decodeEpochTiers(entries: (bigint | number | { toString(): string })[], commitments: bigint[]) {
+  const byTag = new Map<bigint, number>();
+  for (const e of entries) {
+    const v = BigInt(e.toString());
+    if (v === 0n) continue;
+    byTag.set((v >> 8n) << 8n, Number(v & 0xffn));
+  }
+  return commitments.map((c) => ({ commitment: c, level: byTag.get(repTag(c)) ?? 1, credited: byTag.has(repTag(c)) }));
+}
+
+/** Effective tier for the next epoch: imported (zkTLS) tier shifted by the internal level. */
+export function applyRepLevel(importedTier: number, level: number, maxTier = 2): number {
+  return Math.max(0, Math.min(maxTier, importedTier + level - 1));
 }

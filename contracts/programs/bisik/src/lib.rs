@@ -32,6 +32,9 @@ pub const BID_SEED: &[u8] = b"bid";
 pub const ALLOC_SEED: &[u8] = b"alloc";
 pub const OUTCOME_SEED: &[u8] = b"outcome";
 pub const DISPUTE_SEED: &[u8] = b"dispute";
+pub const SIGNALS_SEED: &[u8] = b"signals";
+pub const REP_SEED: &[u8] = b"rep";
+pub const REP_CREDIT_SEED: &[u8] = b"repc";
 
 pub const MAX_OPTIONS: u16 = 16;
 pub const MAX_BUYERS: usize = 4;
@@ -43,6 +46,12 @@ pub const TIER_BPS: [u64; 3] = [10_000, 11_500, 13_000];
 pub const ENC_OFFSET: u32 = 56;
 pub const AGG_CTS: usize = 16;
 pub const AUCTION_CTS: usize = 10;
+/// `Reputation` layout: 8 (discriminator) + 16 (nonce), then the packed table ciphertexts.
+pub const REP_ENC_OFFSET: u32 = 24;
+/// Ciphertexts of `Enc<Mxe, Pack<RepTable>>` (32 slots x (u64 key + 3 x u8 counters)).
+pub const REP_CTS: usize = 14;
+/// Capacity of the reputation table (must match `R` in encrypted-ixs).
+pub const REP_SLOTS: usize = 32;
 
 pub mod status {
     pub const OPEN: u8 = 0;
@@ -173,6 +182,26 @@ pub mod bisik {
 
     pub fn init_position_hits_comp_def(ctx: Context<InitPositionHitsCompDef>, circuit_base_url: String) -> Result<()> {
         init_computation_def(ctx.accounts, circuit_source(&circuit_base_url, "position_hits", arcium_macros::circuit_hash!("position_hits")))?;
+        Ok(())
+    }
+
+    pub fn init_reveal_signals_comp_def(ctx: Context<InitRevealSignalsCompDef>, circuit_base_url: String) -> Result<()> {
+        init_computation_def(ctx.accounts, circuit_source(&circuit_base_url, "reveal_signals", arcium_macros::circuit_hash!("reveal_signals")))?;
+        Ok(())
+    }
+
+    pub fn init_init_rep_comp_def(ctx: Context<InitInitRepCompDef>, circuit_base_url: String) -> Result<()> {
+        init_computation_def(ctx.accounts, circuit_source(&circuit_base_url, "init_rep", arcium_macros::circuit_hash!("init_rep")))?;
+        Ok(())
+    }
+
+    pub fn init_credit_reputation_comp_def(ctx: Context<InitCreditReputationCompDef>, circuit_base_url: String) -> Result<()> {
+        init_computation_def(ctx.accounts, circuit_source(&circuit_base_url, "credit_reputation", arcium_macros::circuit_hash!("credit_reputation")))?;
+        Ok(())
+    }
+
+    pub fn init_epoch_tiers_comp_def(ctx: Context<InitEpochTiersCompDef>, circuit_base_url: String) -> Result<()> {
+        init_computation_def(ctx.accounts, circuit_source(&circuit_base_url, "epoch_tiers", arcium_macros::circuit_hash!("epoch_tiers")))?;
         Ok(())
     }
 
@@ -1005,6 +1034,209 @@ pub mod bisik {
         )?;
         Ok(())
     }
+
+    // ───────────────────────────── D4: signals to the buyer's key ─────────────────────────────
+
+    /// D4 (P1): the buyer receives, encrypted to its own x25519 key, the weighted support of
+    /// exactly the options its allocation lets it see (`visible_mask`). The ciphertext is
+    /// stored in `SignalReveal` so the buyer (or the frontend, via the server) can decrypt it.
+    /// May be called again with a new key; the previous ciphertext is replaced.
+    pub fn reveal_signals(ctx: Context<RevealSignals>, computation_offset: u64, buyer_x25519: [u8; 32]) -> Result<()> {
+        let m = &ctx.accounts.market;
+        require!(m.status >= status::ALLOCATED, BisikError::NotReady);
+        let buyer = ctx.accounts.payer.key();
+        let i = (0..m.buyer_count as usize).find(|&i| m.buyers[i] == buyer).ok_or(BisikError::NotEligibleBuyer)?;
+        // The view must be final: #2 waits for #1's hidden set, flat buyers wait for both.
+        let is_first = m.kind == kind::EXCLUSIVE || m.winners[0] == buyer;
+        let is_second = !is_first && m.winners[1] == buyer;
+        require!(is_first || (is_second && m.next_rank >= 1) || m.next_rank >= 2, BisikError::NotReady);
+        let mask = visible_mask(m, i);
+        let r = &mut ctx.accounts.signals;
+        require!(!r.busy, BisikError::Busy);
+        r.market = m.key();
+        r.buyer = buyer;
+        r.mask = mask;
+        r.busy = true;
+        r.ready = false;
+        r.bump = ctx.bumps.signals;
+        ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
+        let args = ArgBuilder::new()
+            .x25519_pubkey(buyer_x25519)
+            .plaintext_u16(mask)
+            .plaintext_u128(ctx.accounts.agg.nonce)
+            .account(ctx.accounts.agg.key(), ENC_OFFSET, (AGG_CTS * 32) as u32)
+            .build();
+        let cb = vec![RevealSignalsCallback::callback_ix(
+            computation_offset,
+            &ctx.accounts.mxe_account,
+            &[CallbackAccount { pubkey: ctx.accounts.signals.key(), is_writable: true }],
+        )?];
+        queue_computation(ctx.accounts, computation_offset, args, cb, 1, 0, 0)?;
+        Ok(())
+    }
+
+    #[arcium_callback(encrypted_ix = "reveal_signals")]
+    pub fn reveal_signals_callback(ctx: Context<RevealSignalsCallback>, output: SignedComputationOutputs<RevealSignalsOutput>) -> Result<()> {
+        let o = match output.verify_output(&ctx.accounts.cluster_account, &ctx.accounts.computation_account) {
+            Ok(RevealSignalsOutput { field_0 }) => field_0,
+            Err(_) => {
+                // Persist the reset (an Err would roll it back and leave the account busy).
+                ctx.accounts.signals.busy = false;
+                return Ok(());
+            }
+        };
+        let r = &mut ctx.accounts.signals;
+        r.enc_pubkey = o.encryption_key;
+        r.nonce = o.nonce;
+        r.ct = o.ciphertexts;
+        r.busy = false;
+        r.ready = true;
+        r.revealed_at = Clock::get()?.unix_timestamp;
+        emit!(SignalsRevealed { market: r.market, buyer: r.buyer, mask: r.mask });
+        Ok(())
+    }
+
+    // ───────────────────────────── D6: private reputation ─────────────────────────────
+
+    /// D6: create the global encrypted reputation table (operator, once).
+    pub fn init_reputation(ctx: Context<InitReputation>, computation_offset: u64) -> Result<()> {
+        require!(ctx.accounts.payer.key() == ctx.accounts.config.operator, BisikError::Unauthorized);
+        let r = &mut ctx.accounts.rep;
+        require!(!r.ready && !r.busy, BisikError::AlreadyDone);
+        r.busy = true;
+        r.bump = ctx.bumps.rep;
+        ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
+        let args = ArgBuilder::new().build();
+        let cb = vec![InitRepCallback::callback_ix(
+            computation_offset,
+            &ctx.accounts.mxe_account,
+            &[CallbackAccount { pubkey: ctx.accounts.rep.key(), is_writable: true }],
+        )?];
+        queue_computation(ctx.accounts, computation_offset, args, cb, 1, 0, 0)?;
+        Ok(())
+    }
+
+    #[arcium_callback(encrypted_ix = "init_rep")]
+    pub fn init_rep_callback(ctx: Context<InitRepCallback>, output: SignedComputationOutputs<InitRepOutput>) -> Result<()> {
+        let o = match output.verify_output(&ctx.accounts.cluster_account, &ctx.accounts.computation_account) {
+            Ok(InitRepOutput { field_0 }) => field_0,
+            Err(_) => {
+                ctx.accounts.rep.busy = false;
+                return Ok(());
+            }
+        };
+        let r = &mut ctx.accounts.rep;
+        r.ct = o.ciphertexts;
+        r.nonce = o.nonce;
+        r.ready = true;
+        r.busy = false;
+        Ok(())
+    }
+
+    /// D6 (F10): credit one settled position to its (secret) scout. Anyone may call (keeper).
+    /// `RepCredit` marks the position so it is credited at most once (a failed computation
+    /// leaves `done = false`, so it can be retried; `rep.busy` serializes all credits).
+    pub fn credit_reputation(ctx: Context<CreditReputation>, computation_offset: u64) -> Result<()> {
+        let m = &ctx.accounts.market;
+        let p = &ctx.accounts.position;
+        require!(m.status >= status::SETTLING && p.settled, BisikError::NotReady);
+        let r = &mut ctx.accounts.rep;
+        require!(r.ready && !r.busy, BisikError::Busy);
+        r.busy = true;
+        let c = &mut ctx.accounts.rep_credit;
+        require!(!c.done, BisikError::AlreadyDone);
+        c.position = p.key();
+        c.bump = ctx.bumps.rep_credit;
+        ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
+        let args = ArgBuilder::new()
+            .x25519_pubkey(p.enc_pubkey)
+            .plaintext_u128(p.enc_nonce)
+            .encrypted_u8(p.enc_option)
+            .x25519_pubkey(p.enc_pubkey)
+            .plaintext_u128(p.credit_nonce)
+            .encrypted_u128(p.credit_ct)
+            .plaintext_u16(m.masks[0])
+            .plaintext_u16(m.masks[1])
+            .plaintext_u16(m.masks[2])
+            .plaintext_u16(m.masks[3])
+            .plaintext_bool(p.slashed)
+            .plaintext_u128(ctx.accounts.rep.nonce)
+            .account(ctx.accounts.rep.key(), REP_ENC_OFFSET, (REP_CTS * 32) as u32)
+            .build();
+        let cb = vec![CreditReputationCallback::callback_ix(
+            computation_offset,
+            &ctx.accounts.mxe_account,
+            &[
+                CallbackAccount { pubkey: ctx.accounts.rep.key(), is_writable: true },
+                CallbackAccount { pubkey: ctx.accounts.rep_credit.key(), is_writable: true },
+            ],
+        )?];
+        queue_computation(ctx.accounts, computation_offset, args, cb, 1, 0, 0)?;
+        Ok(())
+    }
+
+    #[arcium_callback(encrypted_ix = "credit_reputation")]
+    pub fn credit_reputation_callback(ctx: Context<CreditReputationCallback>, output: SignedComputationOutputs<CreditReputationOutput>) -> Result<()> {
+        let o = match output.verify_output(&ctx.accounts.cluster_account, &ctx.accounts.computation_account) {
+            Ok(CreditReputationOutput { field_0 }) => field_0,
+            Err(_) => {
+                ctx.accounts.rep.busy = false;
+                return Ok(());
+            }
+        };
+        let r = &mut ctx.accounts.rep;
+        r.ct = o.ciphertexts;
+        r.nonce = o.nonce;
+        r.busy = false;
+        r.credits += 1;
+        ctx.accounts.rep_credit.done = true;
+        Ok(())
+    }
+
+    /// D6 (end of epoch): reveal tier membership for the next epoch, once per epoch
+    /// (operator). Output: sorted `(C_lo64 & !0xff) | level` entries; see `epoch_tiers`.
+    pub fn epoch_tiers(ctx: Context<EpochTiers>, computation_offset: u64) -> Result<()> {
+        let c = &ctx.accounts.config;
+        require!(ctx.accounts.payer.key() == c.operator, BisikError::Unauthorized);
+        let next = c.current_epoch + 1;
+        let r = &mut ctx.accounts.rep;
+        require!(r.ready && !r.busy, BisikError::Busy);
+        require!(r.tiers_epoch != next, BisikError::AlreadyDone);
+        r.busy = true;
+        r.tiers_epoch = next;
+        r.tiers_ready = false;
+        ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
+        let args = ArgBuilder::new()
+            .plaintext_u128(ctx.accounts.rep.nonce)
+            .account(ctx.accounts.rep.key(), REP_ENC_OFFSET, (REP_CTS * 32) as u32)
+            .build();
+        let cb = vec![EpochTiersCallback::callback_ix(
+            computation_offset,
+            &ctx.accounts.mxe_account,
+            &[CallbackAccount { pubkey: ctx.accounts.rep.key(), is_writable: true }],
+        )?];
+        queue_computation(ctx.accounts, computation_offset, args, cb, 1, 0, 0)?;
+        Ok(())
+    }
+
+    #[arcium_callback(encrypted_ix = "epoch_tiers")]
+    pub fn epoch_tiers_callback(ctx: Context<EpochTiersCallback>, output: SignedComputationOutputs<EpochTiersOutput>) -> Result<()> {
+        let entries = match output.verify_output(&ctx.accounts.cluster_account, &ctx.accounts.computation_account) {
+            Ok(EpochTiersOutput { field_0: EpochTiersOutputStruct0 { field_0 } }) => field_0,
+            Err(_) => {
+                let r = &mut ctx.accounts.rep;
+                r.busy = false;
+                r.tiers_epoch = 0;
+                return Ok(());
+            }
+        };
+        let r = &mut ctx.accounts.rep;
+        r.tiers = entries;
+        r.tiers_ready = true;
+        r.busy = false;
+        emit!(EpochTiersRevealed { epoch: r.tiers_epoch, credited: entries.iter().filter(|&&e| e != 0).count() as u8 });
+        Ok(())
+    }
 }
 
 /// Empty `base_url`: the circuit is uploaded onchain (localnet). Otherwise Arx nodes fetch
@@ -1240,6 +1472,49 @@ pub struct Dispute {
     pub opened_at: i64,
     pub deadline: i64,
     pub status: u8,
+    pub bump: u8,
+}
+
+/// D4: the weighted support of a buyer's visible options, encrypted to the buyer's x25519 key
+/// (`enc_pubkey`). Hidden options decrypt to 0.
+#[account]
+#[derive(InitSpace)]
+pub struct SignalReveal {
+    pub market: Pubkey,
+    pub buyer: Pubkey,
+    pub mask: u16,
+    pub busy: bool,
+    pub ready: bool,
+    pub enc_pubkey: [u8; 32],
+    pub nonce: u128,
+    pub ct: [[u8; 32]; 16],
+    pub revealed_at: i64,
+    pub bump: u8,
+}
+
+/// D6: global encrypted reputation table (living doc 8.2 step 5). Layout: see `REP_ENC_OFFSET`.
+#[account]
+#[derive(InitSpace)]
+pub struct Reputation {
+    pub nonce: u128,
+    pub ct: [[u8; 32]; REP_CTS],
+    pub ready: bool,
+    pub busy: bool,
+    pub credits: u64,
+    /// Epoch the last revealed `tiers` apply to (0 = none yet).
+    pub tiers_epoch: u32,
+    pub tiers_ready: bool,
+    /// Sorted `(C_lo64 & !0xff) | level` entries; 0 = unused slot.
+    pub tiers: [u64; REP_SLOTS],
+    pub bump: u8,
+}
+
+/// D6: marks a position as credited to the reputation table (at most once).
+#[account]
+#[derive(InitSpace)]
+pub struct RepCredit {
+    pub position: Pubkey,
+    pub done: bool,
     pub bump: u8,
 }
 
@@ -1608,6 +1883,10 @@ pub struct DisputeResolved { pub market: Pubkey, pub nullifier: [u8; 32], pub up
 pub struct PositionSettled { pub market: Pubkey, pub nullifier: [u8; 32], pub payout: u64 }
 #[event]
 pub struct Claimed { pub market: Pubkey, pub nullifier: [u8; 32], pub amount: u64 }
+#[event]
+pub struct SignalsRevealed { pub market: Pubkey, pub buyer: Pubkey, pub mask: u16 }
+#[event]
+pub struct EpochTiersRevealed { pub epoch: u32, pub credited: u8 }
 
 #[error_code]
 pub enum BisikError {
@@ -1670,6 +1949,10 @@ pub const COMP_DEF_OFFSET_PLACE_BID: u32 = comp_def_offset("place_bid");
 pub const COMP_DEF_OFFSET_RESOLVE_AUCTION: u32 = comp_def_offset("resolve_auction");
 pub const COMP_DEF_OFFSET_WINNING_WEIGHTS: u32 = comp_def_offset("winning_weights");
 pub const COMP_DEF_OFFSET_POSITION_HITS: u32 = comp_def_offset("position_hits");
+pub const COMP_DEF_OFFSET_REVEAL_SIGNALS: u32 = comp_def_offset("reveal_signals");
+pub const COMP_DEF_OFFSET_INIT_REP: u32 = comp_def_offset("init_rep");
+pub const COMP_DEF_OFFSET_CREDIT_REPUTATION: u32 = comp_def_offset("credit_reputation");
+pub const COMP_DEF_OFFSET_EPOCH_TIERS: u32 = comp_def_offset("epoch_tiers");
 
 #[queue_computation_accounts("init_market_agg", payer)]
 #[derive(Accounts)]
@@ -2262,6 +2545,310 @@ pub struct PositionHitsCallback<'info> {
 #[init_computation_definition_accounts("position_hits", payer)]
 #[derive(Accounts)]
 pub struct InitPositionHitsCompDef<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(mut, address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    #[account(mut)]
+    /// CHECK: not initialized yet; checked by the arcium program.
+    pub comp_def_account: UncheckedAccount<'info>,
+    #[account(mut, address = derive_mxe_lut_pda!(mxe_account.lut_offset_slot))]
+    /// CHECK: checked by the arcium program.
+    pub address_lookup_table: UncheckedAccount<'info>,
+    #[account(address = LUT_PROGRAM_ID)]
+    /// CHECK: address lookup table program.
+    pub lut_program: UncheckedAccount<'info>,
+    pub arcium_program: Program<'info, Arcium>,
+    pub system_program: Program<'info, System>,
+}
+
+// ---- D4 / D6 Arcium account structs ----
+
+#[queue_computation_accounts("reveal_signals", payer)]
+#[derive(Accounts)]
+#[instruction(computation_offset: u64)]
+pub struct RevealSignals<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(init_if_needed, space = 9, payer = payer, seeds = [&SIGN_PDA_SEED], bump, address = derive_sign_pda!())]
+    pub sign_pda_account: Account<'info, ArciumSignerAccount>,
+    #[account(address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    #[account(mut, address = derive_mempool_pda!(mxe_account))]
+    /// CHECK: checked by the arcium program.
+    pub mempool_account: UncheckedAccount<'info>,
+    #[account(mut, address = derive_execpool_pda!(mxe_account))]
+    /// CHECK: checked by the arcium program.
+    pub executing_pool: UncheckedAccount<'info>,
+    #[account(mut, address = derive_comp_pda!(computation_offset, mxe_account))]
+    /// CHECK: checked by the arcium program.
+    pub computation_account: UncheckedAccount<'info>,
+    #[account(address = derive_comp_def_pda!(COMP_DEF_OFFSET_REVEAL_SIGNALS))]
+    pub comp_def_account: Box<Account<'info, ComputationDefinitionAccount>>,
+    #[account(mut, address = derive_cluster_pda!(mxe_account))]
+    pub cluster_account: Box<Account<'info, Cluster>>,
+    #[account(mut, address = ARCIUM_FEE_POOL_ACCOUNT_ADDRESS)]
+    pub pool_account: Box<Account<'info, FeePool>>,
+    #[account(mut, address = ARCIUM_CLOCK_ACCOUNT_ADDRESS)]
+    pub clock_account: Box<Account<'info, ClockAccount>>,
+    pub system_program: Program<'info, System>,
+    pub arcium_program: Program<'info, Arcium>,
+    pub market: Box<Account<'info, Market>>,
+    #[account(has_one = market)]
+    pub agg: Box<Account<'info, AggState>>,
+    #[account(init_if_needed, payer = payer, space = 8 + SignalReveal::INIT_SPACE, seeds = [SIGNALS_SEED, market.key().as_ref(), payer.key().as_ref()], bump)]
+    pub signals: Box<Account<'info, SignalReveal>>,
+}
+
+#[callback_accounts("reveal_signals")]
+#[derive(Accounts)]
+pub struct RevealSignalsCallback<'info> {
+    pub arcium_program: Program<'info, Arcium>,
+    #[account(address = derive_comp_def_pda!(COMP_DEF_OFFSET_REVEAL_SIGNALS))]
+    pub comp_def_account: Box<Account<'info, ComputationDefinitionAccount>>,
+    #[account(address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    /// CHECK: validated by the Arcium program; verify_output reads from it.
+    pub computation_account: UncheckedAccount<'info>,
+    #[account(address = derive_cluster_pda!(mxe_account))]
+    pub cluster_account: Box<Account<'info, Cluster>>,
+    #[account(address = ::arcium_anchor::solana_instructions_sysvar::ID)]
+    /// CHECK: instructions sysvar.
+    pub instructions_sysvar: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub signals: Box<Account<'info, SignalReveal>>,
+}
+
+#[init_computation_definition_accounts("reveal_signals", payer)]
+#[derive(Accounts)]
+pub struct InitRevealSignalsCompDef<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(mut, address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    #[account(mut)]
+    /// CHECK: not initialized yet; checked by the arcium program.
+    pub comp_def_account: UncheckedAccount<'info>,
+    #[account(mut, address = derive_mxe_lut_pda!(mxe_account.lut_offset_slot))]
+    /// CHECK: checked by the arcium program.
+    pub address_lookup_table: UncheckedAccount<'info>,
+    #[account(address = LUT_PROGRAM_ID)]
+    /// CHECK: address lookup table program.
+    pub lut_program: UncheckedAccount<'info>,
+    pub arcium_program: Program<'info, Arcium>,
+    pub system_program: Program<'info, System>,
+}
+
+#[queue_computation_accounts("init_rep", payer)]
+#[derive(Accounts)]
+#[instruction(computation_offset: u64)]
+pub struct InitReputation<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(init_if_needed, space = 9, payer = payer, seeds = [&SIGN_PDA_SEED], bump, address = derive_sign_pda!())]
+    pub sign_pda_account: Account<'info, ArciumSignerAccount>,
+    #[account(address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    #[account(mut, address = derive_mempool_pda!(mxe_account))]
+    /// CHECK: checked by the arcium program.
+    pub mempool_account: UncheckedAccount<'info>,
+    #[account(mut, address = derive_execpool_pda!(mxe_account))]
+    /// CHECK: checked by the arcium program.
+    pub executing_pool: UncheckedAccount<'info>,
+    #[account(mut, address = derive_comp_pda!(computation_offset, mxe_account))]
+    /// CHECK: checked by the arcium program.
+    pub computation_account: UncheckedAccount<'info>,
+    #[account(address = derive_comp_def_pda!(COMP_DEF_OFFSET_INIT_REP))]
+    pub comp_def_account: Box<Account<'info, ComputationDefinitionAccount>>,
+    #[account(mut, address = derive_cluster_pda!(mxe_account))]
+    pub cluster_account: Box<Account<'info, Cluster>>,
+    #[account(mut, address = ARCIUM_FEE_POOL_ACCOUNT_ADDRESS)]
+    pub pool_account: Box<Account<'info, FeePool>>,
+    #[account(mut, address = ARCIUM_CLOCK_ACCOUNT_ADDRESS)]
+    pub clock_account: Box<Account<'info, ClockAccount>>,
+    pub system_program: Program<'info, System>,
+    pub arcium_program: Program<'info, Arcium>,
+    #[account(seeds = [CONFIG_SEED], bump = config.bump)]
+    pub config: Box<Account<'info, Config>>,
+    #[account(init_if_needed, payer = payer, space = 8 + Reputation::INIT_SPACE, seeds = [REP_SEED], bump)]
+    pub rep: Box<Account<'info, Reputation>>,
+}
+
+#[callback_accounts("init_rep")]
+#[derive(Accounts)]
+pub struct InitRepCallback<'info> {
+    pub arcium_program: Program<'info, Arcium>,
+    #[account(address = derive_comp_def_pda!(COMP_DEF_OFFSET_INIT_REP))]
+    pub comp_def_account: Box<Account<'info, ComputationDefinitionAccount>>,
+    #[account(address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    /// CHECK: validated by the Arcium program; verify_output reads from it.
+    pub computation_account: UncheckedAccount<'info>,
+    #[account(address = derive_cluster_pda!(mxe_account))]
+    pub cluster_account: Box<Account<'info, Cluster>>,
+    #[account(address = ::arcium_anchor::solana_instructions_sysvar::ID)]
+    /// CHECK: instructions sysvar.
+    pub instructions_sysvar: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub rep: Box<Account<'info, Reputation>>,
+}
+
+#[init_computation_definition_accounts("init_rep", payer)]
+#[derive(Accounts)]
+pub struct InitInitRepCompDef<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(mut, address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    #[account(mut)]
+    /// CHECK: not initialized yet; checked by the arcium program.
+    pub comp_def_account: UncheckedAccount<'info>,
+    #[account(mut, address = derive_mxe_lut_pda!(mxe_account.lut_offset_slot))]
+    /// CHECK: checked by the arcium program.
+    pub address_lookup_table: UncheckedAccount<'info>,
+    #[account(address = LUT_PROGRAM_ID)]
+    /// CHECK: address lookup table program.
+    pub lut_program: UncheckedAccount<'info>,
+    pub arcium_program: Program<'info, Arcium>,
+    pub system_program: Program<'info, System>,
+}
+
+#[queue_computation_accounts("credit_reputation", payer)]
+#[derive(Accounts)]
+#[instruction(computation_offset: u64)]
+pub struct CreditReputation<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(init_if_needed, space = 9, payer = payer, seeds = [&SIGN_PDA_SEED], bump, address = derive_sign_pda!())]
+    pub sign_pda_account: Account<'info, ArciumSignerAccount>,
+    #[account(address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    #[account(mut, address = derive_mempool_pda!(mxe_account))]
+    /// CHECK: checked by the arcium program.
+    pub mempool_account: UncheckedAccount<'info>,
+    #[account(mut, address = derive_execpool_pda!(mxe_account))]
+    /// CHECK: checked by the arcium program.
+    pub executing_pool: UncheckedAccount<'info>,
+    #[account(mut, address = derive_comp_pda!(computation_offset, mxe_account))]
+    /// CHECK: checked by the arcium program.
+    pub computation_account: UncheckedAccount<'info>,
+    #[account(address = derive_comp_def_pda!(COMP_DEF_OFFSET_CREDIT_REPUTATION))]
+    pub comp_def_account: Box<Account<'info, ComputationDefinitionAccount>>,
+    #[account(mut, address = derive_cluster_pda!(mxe_account))]
+    pub cluster_account: Box<Account<'info, Cluster>>,
+    #[account(mut, address = ARCIUM_FEE_POOL_ACCOUNT_ADDRESS)]
+    pub pool_account: Box<Account<'info, FeePool>>,
+    #[account(mut, address = ARCIUM_CLOCK_ACCOUNT_ADDRESS)]
+    pub clock_account: Box<Account<'info, ClockAccount>>,
+    pub system_program: Program<'info, System>,
+    pub arcium_program: Program<'info, Arcium>,
+    pub market: Box<Account<'info, Market>>,
+    #[account(has_one = market)]
+    pub position: Box<Account<'info, Position>>,
+    #[account(mut, seeds = [REP_SEED], bump = rep.bump)]
+    pub rep: Box<Account<'info, Reputation>>,
+    #[account(init_if_needed, payer = payer, space = 8 + RepCredit::INIT_SPACE, seeds = [REP_CREDIT_SEED, position.key().as_ref()], bump)]
+    pub rep_credit: Box<Account<'info, RepCredit>>,
+}
+
+#[callback_accounts("credit_reputation")]
+#[derive(Accounts)]
+pub struct CreditReputationCallback<'info> {
+    pub arcium_program: Program<'info, Arcium>,
+    #[account(address = derive_comp_def_pda!(COMP_DEF_OFFSET_CREDIT_REPUTATION))]
+    pub comp_def_account: Box<Account<'info, ComputationDefinitionAccount>>,
+    #[account(address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    /// CHECK: validated by the Arcium program; verify_output reads from it.
+    pub computation_account: UncheckedAccount<'info>,
+    #[account(address = derive_cluster_pda!(mxe_account))]
+    pub cluster_account: Box<Account<'info, Cluster>>,
+    #[account(address = ::arcium_anchor::solana_instructions_sysvar::ID)]
+    /// CHECK: instructions sysvar.
+    pub instructions_sysvar: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub rep: Box<Account<'info, Reputation>>,
+    #[account(mut)]
+    pub rep_credit: Box<Account<'info, RepCredit>>,
+}
+
+#[init_computation_definition_accounts("credit_reputation", payer)]
+#[derive(Accounts)]
+pub struct InitCreditReputationCompDef<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(mut, address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    #[account(mut)]
+    /// CHECK: not initialized yet; checked by the arcium program.
+    pub comp_def_account: UncheckedAccount<'info>,
+    #[account(mut, address = derive_mxe_lut_pda!(mxe_account.lut_offset_slot))]
+    /// CHECK: checked by the arcium program.
+    pub address_lookup_table: UncheckedAccount<'info>,
+    #[account(address = LUT_PROGRAM_ID)]
+    /// CHECK: address lookup table program.
+    pub lut_program: UncheckedAccount<'info>,
+    pub arcium_program: Program<'info, Arcium>,
+    pub system_program: Program<'info, System>,
+}
+
+#[queue_computation_accounts("epoch_tiers", payer)]
+#[derive(Accounts)]
+#[instruction(computation_offset: u64)]
+pub struct EpochTiers<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(init_if_needed, space = 9, payer = payer, seeds = [&SIGN_PDA_SEED], bump, address = derive_sign_pda!())]
+    pub sign_pda_account: Account<'info, ArciumSignerAccount>,
+    #[account(address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    #[account(mut, address = derive_mempool_pda!(mxe_account))]
+    /// CHECK: checked by the arcium program.
+    pub mempool_account: UncheckedAccount<'info>,
+    #[account(mut, address = derive_execpool_pda!(mxe_account))]
+    /// CHECK: checked by the arcium program.
+    pub executing_pool: UncheckedAccount<'info>,
+    #[account(mut, address = derive_comp_pda!(computation_offset, mxe_account))]
+    /// CHECK: checked by the arcium program.
+    pub computation_account: UncheckedAccount<'info>,
+    #[account(address = derive_comp_def_pda!(COMP_DEF_OFFSET_EPOCH_TIERS))]
+    pub comp_def_account: Box<Account<'info, ComputationDefinitionAccount>>,
+    #[account(mut, address = derive_cluster_pda!(mxe_account))]
+    pub cluster_account: Box<Account<'info, Cluster>>,
+    #[account(mut, address = ARCIUM_FEE_POOL_ACCOUNT_ADDRESS)]
+    pub pool_account: Box<Account<'info, FeePool>>,
+    #[account(mut, address = ARCIUM_CLOCK_ACCOUNT_ADDRESS)]
+    pub clock_account: Box<Account<'info, ClockAccount>>,
+    pub system_program: Program<'info, System>,
+    pub arcium_program: Program<'info, Arcium>,
+    #[account(seeds = [CONFIG_SEED], bump = config.bump)]
+    pub config: Box<Account<'info, Config>>,
+    #[account(mut, seeds = [REP_SEED], bump = rep.bump)]
+    pub rep: Box<Account<'info, Reputation>>,
+}
+
+#[callback_accounts("epoch_tiers")]
+#[derive(Accounts)]
+pub struct EpochTiersCallback<'info> {
+    pub arcium_program: Program<'info, Arcium>,
+    #[account(address = derive_comp_def_pda!(COMP_DEF_OFFSET_EPOCH_TIERS))]
+    pub comp_def_account: Box<Account<'info, ComputationDefinitionAccount>>,
+    #[account(address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    /// CHECK: validated by the Arcium program; verify_output reads from it.
+    pub computation_account: UncheckedAccount<'info>,
+    #[account(address = derive_cluster_pda!(mxe_account))]
+    pub cluster_account: Box<Account<'info, Cluster>>,
+    #[account(address = ::arcium_anchor::solana_instructions_sysvar::ID)]
+    /// CHECK: instructions sysvar.
+    pub instructions_sysvar: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub rep: Box<Account<'info, Reputation>>,
+}
+
+#[init_computation_definition_accounts("epoch_tiers", payer)]
+#[derive(Accounts)]
+pub struct InitEpochTiersCompDef<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
     #[account(mut, address = derive_mxe_pda!())]

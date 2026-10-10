@@ -1,0 +1,27 @@
+{
+  "name": "@bisik/browser-proof",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "B4 harness: Semaphore depth-20 proofs (proveStake/proveClaim) generated in a browser. Not the product frontend.",
+  "scripts": {
+    "artifacts": "node fetch-artifacts.mjs",
+    "build": "node fetch-artifacts.mjs && vite build",
+    "dev": "node fetch-artifacts.mjs && vite",
+    "headless": "node fetch-artifacts.mjs && vite build && node run-headless.mjs",
+    "node-bench": "tsx node-bench.ts",
+    "typecheck": "tsc -p . --noEmit"
+  },
+  "dependencies": {
+    "@bisik/shared": "workspace:*",
+    "@bisik/zk": "workspace:*",
+    "@semaphore-protocol/group": "4.14.3",
+    "@semaphore-protocol/identity": "4.14.3",
+    "@semaphore-protocol/proof": "4.14.3"
+  },
+  "devDependencies": {
+    "playwright-core": "1.60.0",
+    "snarkjs": "0.7.5",
+    "vite": "6.4.3"
+  }
+}

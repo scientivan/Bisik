@@ -30,7 +30,7 @@ import {
   getMXEAccAddress,
   uploadCircuit,
 } from "@arcium-hq/client";
-import { makeProvider, program as mkProgram, pdas, PROGRAM_ID, CIRCUITS, arciumAccounts, queueAndWait, encryptForMxe, fetchMxeKey, computeBudget, anchor, Status } from "@bisik/sdk";
+import { makeProvider, program as mkProgram, pdas, PROGRAM_ID, CIRCUITS, CIRCUITS_V2, arciumAccounts, queueAndWait, encryptForMxe, encryptStakeSecrets, fetchMxeKey, computeBudget, anchor, Status } from "@bisik/sdk";
 import { buildGroup, proveStake, proveClaim } from "@bisik/zk";
 import { keccak, utf8, Tier, fromHex } from "@bisik/shared";
 
@@ -149,7 +149,9 @@ async function setup() {
   const mxeAccount = getMXEAccAddress(PROGRAM_ID);
   const mxe = await arcium.account.mxeAccount.fetch(mxeAccount);
   const lut = getLookupTableAddress(PROGRAM_ID, mxe.lutOffsetSlot);
-  for (const c of CIRCUITS) {
+  // D4/D6 circuits are only initialized when the deployed program has them (SEED_V2=1).
+  const allCircuits = process.env.SEED_V2 === "1" ? [...CIRCUITS, ...CIRCUITS_V2] : [...CIRCUITS];
+  for (const c of allCircuits) {
     const compDef = PublicKey.findProgramAddressSync([getArciumAccountBaseSeed("ComputationDefinitionAccount"), PROGRAM_ID.toBuffer(), getCompDefAccOffset(c)], getArciumProgramId())[0];
     if (await exists(compDef)) continue;
     const m = "init" + c.split("_").map((w) => w[0].toUpperCase() + w.slice(1)).join("") + "CompDef";
@@ -171,6 +173,12 @@ async function setup() {
     st.mint = mint.toBase58();
     setEnv({ USDC_MINT: mint.toBase58(), VITE_USDC_MINT: mint.toBase58() });
     log("config + mock USDC", mint.toBase58());
+  }
+  if (process.env.SEED_V2 === "1" && !(await exists(P.reputation()))) {
+    await queueAndWait(provider, PROGRAM_ID, (o) =>
+      program.methods.initReputation(o).accountsPartial({ payer: operator.publicKey, config: P.config(), rep: P.reputation(), ...arciumAccounts(PROGRAM_ID, CLUSTER, o, "init_rep") }).signers([operator]),
+    );
+    log("encrypted reputation table initialized (D6)");
   }
   const cfg = await program.account.config.fetch(P.config());
   const mint: PublicKey = cfg.usdcMint;
@@ -245,15 +253,15 @@ async function setup() {
       await mintTo(conn, operator, mint, wTok, operator, s.amount * 1e6);
       const reason = REASONS[`${mi}:${s.option}`];
       const r = await api("/v1/reasons", { marketId: id, optionIndex: s.option, text: reason });
-      const opt = encryptForMxe(mxeKey, [BigInt(s.option)]);
-      const credit = encryptForMxe(mxeKey, [SCOUTS[s.scout].commitment]);
+      // option and credit share one x25519 key so MPC can credit reputation later (D6)
+      const sec = encryptStakeSecrets(mxeKey, s.option, SCOUTS[s.scout].commitment);
       const payload = {
         marketId: BigInt(id),
         slot: s.slot,
         amount: BigInt(s.amount * 1e6),
-        encOptionHash: keccak(opt.pubkey, opt.nonce, Uint8Array.from(opt.ciphertexts[0])),
+        encOptionHash: keccak(sec.pubkey, sec.optionNonce, Uint8Array.from(sec.optionCt)),
         reasonHash: fromHex(r.reasonHash),
-        creditHash: keccak(Uint8Array.from(credit.ciphertexts[0]), credit.nonce),
+        creditHash: keccak(Uint8Array.from(sec.creditCt), sec.creditNonce),
       };
       const { solana } = await proveStake({ identity: SCOUTS[s.scout], group, payload });
       await rpc(
@@ -266,12 +274,12 @@ async function setup() {
             proof: Array.from(solana.proof),
             root: Array.from(solana.root),
             nullifier: Array.from(solana.nullifier),
-            encPubkey: Array.from(opt.pubkey),
-            encNonce: opt.nonceBN,
-            encOption: Array.from(opt.ciphertexts[0]),
+            encPubkey: Array.from(sec.pubkey),
+            encNonce: sec.optionNonceBN,
+            encOption: Array.from(sec.optionCt),
             reasonHash: Array.from(payload.reasonHash),
-            creditCt: Array.from(credit.ciphertexts[0]),
-            creditNonce: credit.nonceBN,
+            creditCt: Array.from(sec.creditCt),
+            creditNonce: sec.creditNonceBN,
           })
           .accounts({ payer: wallet.publicKey, config: P.config(), market, group: P.group(Tier.Gold, g.epoch), position: P.position(market, solana.nullifier), payerToken: wTok, escrow: P.escrow(market), tokenProgram: TOKEN_PROGRAM_ID })
           .preInstructions([computeBudget()]),
