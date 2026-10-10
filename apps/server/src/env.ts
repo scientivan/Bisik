@@ -23,7 +23,7 @@ function keypairPath(): string {
 }
 
 export const env = {
-  port: Number(process.env.SERVER_PORT ?? 8787),
+  port: Number(process.env.PORT ?? process.env.SERVER_PORT ?? 8787),
   publicUrl: process.env.SERVER_PUBLIC_URL ?? "http://localhost:8787",
   dbPath: process.env.SERVER_DB_PATH ?? "./data/bisik.sqlite",
   rpcUrl: process.env.SOLANA_RPC_URL ?? "http://127.0.0.1:8899",

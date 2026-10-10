@@ -25,7 +25,7 @@ Copy the values from the root `.env`. Do not paste them anywhere else.
 | `PLATFORM_SALT`, `SERVER_DATA_KEY`, `JWT_SECRET` | from `.env`. **Never change these after launch**: changing them breaks the nullifiers and makes stored data unreadable. |
 | `BISIK_DEMO` | `1` only while recording the demo (enables the demo-only seeding endpoint) |
 
-Railway sets `PORT` automatically. Also set `SERVER_PORT` to the same value Railway shows, or simply `8787` and set the service port to 8787.
+Railway sets `PORT` automatically and the server listens on it.
 
 ## 3. Keeper service
 
