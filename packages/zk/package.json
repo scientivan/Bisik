@@ -1,0 +1,16 @@
+{
+  "name": "@bisik/zk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "scripts": { "build": "tsc -p .", "typecheck": "tsc -p . --noEmit", "test": "tsx --test src/*.test.ts" },
+  "dependencies": {
+    "@bisik/shared": "workspace:*",
+    "@semaphore-protocol/group": "4.14.3",
+    "@semaphore-protocol/identity": "4.14.3",
+    "@semaphore-protocol/proof": "4.14.3"
+  }
+}

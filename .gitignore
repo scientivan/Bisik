@@ -1,0 +1,43 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+**/keypairs/
+id.json
+
+# Node
+node_modules/
+dist/
+.next/
+.vite/
+.turbo/
+.vercel/
+coverage/
+*.log
+
+# Rust / Anchor / Solana
+target/
+.anchor/
+test-ledger/
+**/*.so
+
+# Arcium build and localnet artifacts
+build/
+artifacts/localnet/
+
+# ZK artifacts (downloaded or generated, large)
+*.zkey
+*.ptau
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Local agent state
+.claude/
+.gemini/
+.cursor/

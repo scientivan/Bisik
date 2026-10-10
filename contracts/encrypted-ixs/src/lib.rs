@@ -1,0 +1,236 @@
+//! Bisik encrypted instructions (Arcis).
+//!
+//! Written for Bisik. The `arcium-hq/examples` sealed-bid auction was used only as
+//! a reference for the Arcis API (that repository has no license, see R21).
+//!
+//! Circuits:
+//! - `init_market_agg` / `allocate`: per-option weighted support, kept encrypted.
+//! - `preview`: reveals only a strength histogram (no option identities).
+//! - `init_auction` / `place_bid` / `resolve_auction`: sealed bids, top-3 tracking,
+//!   generalized second price for b = 2 slots with a reserve price; bids above the
+//!   bidder's public ceiling deposit are treated as invalid (D-23).
+//! - `winning_weights` / `position_hits`: inputs for settlement (payout math is done
+//!   in plaintext on-chain from these revealed values).
+
+use arcis::*;
+
+#[encrypted]
+mod circuits {
+    use arcis::*;
+
+    /// Maximum options per market (task-tracker 6.1).
+    const N: usize = 16;
+    /// Maximum buyers considered at settlement (2 auction winners + flat buyers).
+    const B: usize = 4;
+
+    /// Weighted support per option (stake x early bonus x tier multiplier).
+    /// 16 ciphertexts; the position count is already public, so scout counts are not tracked.
+    pub struct MarketAgg {
+        pub weighted: [u64; 16],
+    }
+
+    pub struct AuctionState {
+        pub amount: [u64; 3],
+        pub bidder_lo: [u128; 3],
+        pub bidder_hi: [u128; 3],
+        pub count: u16,
+    }
+
+    pub struct Preview {
+        pub backed: u8,
+        pub weak: u8,
+        pub medium: u8,
+        pub strong: u8,
+    }
+
+    pub struct AuctionResult {
+        pub w1_lo: u128,
+        pub w1_hi: u128,
+        pub p1: u64,
+        pub w2_lo: u128,
+        pub w2_hi: u128,
+        pub p2: u64,
+    }
+
+    pub struct WinningWeights {
+        pub denom: [u64; 4],
+    }
+
+    pub struct Hits {
+        pub hit: [bool; 4],
+    }
+
+    #[instruction]
+    pub fn init_market_agg() -> Enc<Mxe, MarketAgg> {
+        Mxe::get().from_arcis(MarketAgg { weighted: [0u64; N] })
+    }
+
+    /// Adds one position's weight to the option it supports. The option index stays secret.
+    /// Indexes at or above `n_options` are ignored, so a malformed ciphertext cannot corrupt
+    /// another market's options.
+    #[instruction]
+    pub fn allocate(
+        option_ctxt: Enc<Shared, u8>,
+        weight: u64,
+        n_options: u8,
+        agg_ctxt: Enc<Mxe, MarketAgg>,
+    ) -> Enc<Mxe, MarketAgg> {
+        let option = option_ctxt.to_arcis();
+        let mut agg = agg_ctxt.to_arcis();
+        for i in 0..N {
+            let hit = (i as u8) == option && option < n_options;
+            if hit {
+                agg.weighted[i] = agg.weighted[i] + weight;
+            }
+        }
+        agg_ctxt.owner.from_arcis(agg)
+    }
+
+    /// Reveals a strength histogram for buyers: strong >= 1/2 of the top option,
+    /// weak < 1/5 of the top option, medium otherwise. No option index is revealed.
+    #[instruction]
+    pub fn preview(agg_ctxt: Enc<Mxe, MarketAgg>) -> Preview {
+        let agg = agg_ctxt.to_arcis();
+        let mut max: u64 = 0;
+        for i in 0..N {
+            if agg.weighted[i] > max {
+                max = agg.weighted[i];
+            }
+        }
+        let mut backed: u8 = 0;
+        let mut weak: u8 = 0;
+        let mut medium: u8 = 0;
+        let mut strong: u8 = 0;
+        for i in 0..N {
+            let w = agg.weighted[i];
+            if w > 0 {
+                backed = backed + 1;
+                if w * 2 >= max {
+                    strong = strong + 1;
+                } else if w * 5 < max {
+                    weak = weak + 1;
+                } else {
+                    medium = medium + 1;
+                }
+            }
+        }
+        Preview { backed, weak, medium, strong }.reveal()
+    }
+
+    #[instruction]
+    pub fn init_auction() -> Enc<Mxe, AuctionState> {
+        Mxe::get().from_arcis(AuctionState {
+            amount: [0u64; 3],
+            bidder_lo: [0u128; 3],
+            bidder_hi: [0u128; 3],
+            count: 0,
+        })
+    }
+
+    /// Folds one sealed bid into the top-3 list. The bidder identity is supplied in
+    /// plaintext by the program (the transaction signer), so it cannot be spoofed.
+    /// A bid above the bidder's public ceiling deposit counts as zero.
+    #[instruction]
+    pub fn place_bid(
+        bid_ctxt: Enc<Shared, u64>,
+        bidder_lo: u128,
+        bidder_hi: u128,
+        ceiling: u64,
+        state_ctxt: Enc<Mxe, AuctionState>,
+    ) -> Enc<Mxe, AuctionState> {
+        let raw = bid_ctxt.to_arcis();
+        let amount = if raw > ceiling { 0 } else { raw };
+        let mut s = state_ctxt.to_arcis();
+
+        if amount > s.amount[0] {
+            s.amount[2] = s.amount[1];
+            s.bidder_lo[2] = s.bidder_lo[1];
+            s.bidder_hi[2] = s.bidder_hi[1];
+            s.amount[1] = s.amount[0];
+            s.bidder_lo[1] = s.bidder_lo[0];
+            s.bidder_hi[1] = s.bidder_hi[0];
+            s.amount[0] = amount;
+            s.bidder_lo[0] = bidder_lo;
+            s.bidder_hi[0] = bidder_hi;
+        } else if amount > s.amount[1] {
+            s.amount[2] = s.amount[1];
+            s.bidder_lo[2] = s.bidder_lo[1];
+            s.bidder_hi[2] = s.bidder_hi[1];
+            s.amount[1] = amount;
+            s.bidder_lo[1] = bidder_lo;
+            s.bidder_hi[1] = bidder_hi;
+        } else if amount > s.amount[2] {
+            s.amount[2] = amount;
+            s.bidder_lo[2] = bidder_lo;
+            s.bidder_hi[2] = bidder_hi;
+        }
+        s.count = s.count + 1;
+        state_ctxt.owner.from_arcis(s)
+    }
+
+    /// Generalized second price for two slots: winner k pays max(bid_{k+1}, reserve).
+    /// A bid below the reserve does not win; its slot is reported as an all-zero key.
+    #[instruction]
+    pub fn resolve_auction(reserve: u64, state_ctxt: Enc<Mxe, AuctionState>) -> AuctionResult {
+        let s = state_ctxt.to_arcis();
+        let ok1 = s.amount[0] > 0 && s.amount[0] >= reserve;
+        let ok2 = s.amount[1] > 0 && s.amount[1] >= reserve;
+        let p1 = if s.amount[1] > reserve { s.amount[1] } else { reserve };
+        let p2 = if s.amount[2] > reserve { s.amount[2] } else { reserve };
+        AuctionResult {
+            w1_lo: if ok1 { s.bidder_lo[0] } else { 0 },
+            w1_hi: if ok1 { s.bidder_hi[0] } else { 0 },
+            p1: if ok1 { p1 } else { 0 },
+            w2_lo: if ok2 { s.bidder_lo[1] } else { 0 },
+            w2_hi: if ok2 { s.bidder_hi[1] } else { 0 },
+            p2: if ok2 { p2 } else { 0 },
+        }
+        .reveal()
+    }
+
+    /// For each buyer b, reveals the total weight of the options that buyer marked as
+    /// successful (bitmask). Used as the payout denominator.
+    #[instruction]
+    pub fn winning_weights(
+        mask0: u16,
+        mask1: u16,
+        mask2: u16,
+        mask3: u16,
+        agg_ctxt: Enc<Mxe, MarketAgg>,
+    ) -> WinningWeights {
+        let agg = agg_ctxt.to_arcis();
+        let masks = [mask0, mask1, mask2, mask3];
+        let mut denom = [0u64; B];
+        for b in 0..B {
+            for i in 0..N {
+                if (masks[b] >> i) & 1 == 1 {
+                    denom[b] = denom[b] + agg.weighted[i];
+                }
+            }
+        }
+        WinningWeights { denom }.reveal()
+    }
+
+    /// For one position, reveals whether its (secret) option is in each buyer's
+    /// success mask. The option index itself is not revealed.
+    #[instruction]
+    pub fn position_hits(
+        option_ctxt: Enc<Shared, u8>,
+        mask0: u16,
+        mask1: u16,
+        mask2: u16,
+        mask3: u16,
+    ) -> Hits {
+        let option = option_ctxt.to_arcis();
+        let masks = [mask0, mask1, mask2, mask3];
+        let mut hit = [false; B];
+        for b in 0..B {
+            for i in 0..N {
+                if (i as u8) == option && (masks[b] >> i) & 1 == 1 {
+                    hit[b] = true;
+                }
+            }
+        }
+        Hits { hit }.reveal()
+    }
+}

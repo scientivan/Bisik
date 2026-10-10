@@ -1,0 +1,12 @@
+{
+  "name": "@bisik/veritas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Veritas: originality (D), AI-likelihood (A), claim extraction, privacy filter and summaries for Bisik reasons. Internal module (D-21); Gemini is only the model provider.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "scripts": { "build": "tsc -p .", "typecheck": "tsc -p . --noEmit", "test": "tsx --test src/*.test.ts" },
+  "dependencies": { "@bisik/shared": "workspace:*" }
+}
