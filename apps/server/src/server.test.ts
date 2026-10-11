@@ -178,3 +178,18 @@ test("allocated claims identify their backed position; disputes reject a differe
   assert.equal((await call("/v1/disputes",{marketId:1,nullifier:toHex(ns[1]),claimId:"claim1",evidence:"Evidence"},token)).status,200);
   fixtureDb.close();
 });
+
+test("market question is accepted only when it matches the onchain hash", async () => {
+  const { keccak, utf8 } = await import("@bisik/shared");
+  const q = "Which teams will ship next? (DEMO)";
+  const m: any = { id: { toString: () => "5" }, kind: 1, status: 2, category: 0, submitEnd: 1, auctionEnd: 2, outcomeEnd: 3, optionCount: 0, positionCount: 0, minStake: 1, maxStake: 2, minReasonLen: 200, reservePrice: 1, flatPrice: 1, totalStaked: 7, preview: [0, 0, 0, 0], questionHash: Array.from(keccak(utf8(q))) };
+  const chain: any = { fetchMarket: async () => m, fetchMarkets: async () => [m], fetchOption: async () => null };
+  const app3 = createApp({ db: openDb(":memory:"), chain, veritas: new Veritas(null), cfg: { dataKey: key, jwtSecret: "t", salt: "s", publicUrl: "http://localhost", reclaim: null, enforceLoginOnly: true } });
+  const bad = await app3.request("/v1/markets/5/question", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: "something else" }) });
+  assert.equal(bad.status, 400);
+  const ok = await app3.request("/v1/markets/5/question", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: q }) });
+  assert.equal(ok.status, 200);
+  const list = await (await app3.request("/v1/markets")).json();
+  assert.equal(list.markets[0].question, q);
+  assert.equal(list.markets[0].totalStaked, 7);
+});

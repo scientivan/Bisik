@@ -13,6 +13,8 @@ export interface Market {
   minReasonLen: number;
   reservePrice: number;
   flatPrice: number;
+  totalStaked?: number;
+  question?: string | null;
   preview: null | {
     backed: number;
     weak: number;

@@ -1543,7 +1543,7 @@ nav a:hover {
 }
 .strength-row {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) 20px;
+  grid-template-columns: 96px minmax(0, 1fr) 20px;
   align-items: center;
   gap: 10px;
   font-size: 14px;
@@ -1867,4 +1867,286 @@ nav a:hover {
   background: #2c31d3;
   border-color: #3338d6;
   color: #6266e4;
+}
+
+/* ── Role-based app shell (Dien, 11 Oct): reference app.reckonz.xyz/receipts ── */
+.role-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--frame);
+  border: 1px solid var(--rule);
+}
+.role-tabs a {
+  padding: 6px 14px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--ink);
+}
+.role-tabs a.active {
+  background: #2a2fd0;
+  color: #f3f2ec;
+}
+.role-bar {
+  background: var(--sheet);
+  border-bottom: 1px solid var(--rule);
+}
+.role-bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.role-copy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  font-size: 14px;
+}
+.role-copy strong {
+  font-weight: 700;
+}
+.role-copy span {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.role-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.role-pages a {
+  padding: 6px 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--ink);
+}
+.role-pages a.active {
+  background: var(--frame);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+.page .banner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px 40px;
+  padding: 20px 24px;
+  border-radius: 16px;
+  background: #2a2fd0;
+  color: #f3f2ec;
+}
+.page .banner h1 {
+  font-size: 22px;
+  color: #f3f2ec;
+}
+.page .banner p {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #e3e4fa;
+  max-width: 62ch;
+}
+.banner-stats {
+  display: flex;
+  gap: 28px;
+  margin: 0;
+}
+.banner-stats div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+.banner-stats dt {
+  font-size: 12px;
+  font-weight: 600;
+  color: #d4d6f8;
+}
+.banner-stats dd {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: var(--sheet);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.steps li span {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--frame);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.steps li.done span {
+  background: var(--ink);
+  color: var(--bone);
+}
+.steps li.current {
+  border-color: #2a2fd0;
+  color: var(--ink);
+}
+.steps li.current span {
+  background: #2a2fd0;
+  color: #f3f2ec;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  border: 1px solid var(--rule);
+  background: var(--sheet);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.chip span {
+  margin-left: 4px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.chip.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bone);
+}
+.chip.active span {
+  color: var(--bone);
+}
+.market-table {
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--sheet);
+  overflow: hidden;
+}
+.market-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) minmax(0, 0.9fr) minmax(0, 1.6fr) minmax(0, 1.3fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 18px;
+  border-top: 1px solid var(--rule-soft);
+  font-size: 14px;
+}
+.market-row.head {
+  border-top: 0;
+  background: var(--frame);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.market-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.market-row small {
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.market-q strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+.market-row .pill {
+  align-self: flex-start;
+}
+.market-action {
+  align-items: flex-end;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+@media (max-width: 900px) {
+  .market-row {
+    grid-template-columns: 1fr;
+  }
+  .market-row.head {
+    display: none;
+  }
+  .market-action {
+    align-items: flex-start;
+  }
+}
+/* One quiet secondary button style: hairline border instead of a heavy ink outline. */
+.page .button.outline {
+  border-width: 1px;
+  border-color: var(--rule);
+  background: var(--sheet);
+}
+.page .button.outline:hover {
+  border-color: var(--ink);
+}
+.fold > summary {
+  cursor: pointer;
+  padding: 12px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--sheet);
+  font-size: 14px;
+  font-weight: 700;
+  list-style-position: inside;
+}
+.fold[open] > summary {
+  margin-bottom: 10px;
+}
+.page .dark-card .list-row {
+  padding: 8px 10px;
+}
+/* Tailwind's `outline` utility collides with our `.button.outline` class name. Keep only the focus ring. */
+.button.outline:not(:focus-visible) {
+  outline: none;
+}
+.page .banner {
+  padding: 16px 22px;
 }

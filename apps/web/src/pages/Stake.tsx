@@ -27,6 +27,7 @@ import {
   Pill,
   StatusStrip,
 } from "../components/ui";
+import { Steps } from "../components/roles";
 let artifacts: Promise<any> | undefined;
 export async function proving() {
   const zk = await import("@bisik/zk");
@@ -177,6 +178,8 @@ export default function Stake() {
         Your pick is encrypted on this device. The operator reads your reason to
         score and filter it.
       </PageTitle>
+
+      <Steps role="scout" at={1} />
       <StatusStrip
         status={market.status}
         end={market.status === "Open" ? market.submitEnd : undefined}
@@ -314,6 +317,8 @@ export default function Stake() {
             </div>
           </Frame>
           <Feedback action={action} />
+          <details className="fold">
+            <summary>Team not listed? Add it as a new option</summary>
           <Frame>
             <div className="stack">
               <h3>Add a team option</h3>
@@ -384,6 +389,7 @@ export default function Stake() {
               </button>
             </div>
           </Frame>
+          </details>
         </div>
         <aside className="side-column">
           <div className="dark-card">
@@ -428,19 +434,12 @@ export default function Stake() {
                 <Pill state={state}>{label}</Pill>
               </div>
             ))}
-            <p className="fine" style={{ color: "#C9CBD3" }}>
-              Claim stake and payout later to a fresh address with a new proof.
-              Wallet funding can still be traced.
-            </p>
+
           </div>
-          <Note title="Know which team you are backing">
-            Existing public rows keep the team reference sealed. Select an
-            existing index only if you already know its reference, or add your
-            own option.
-          </Note>
-          <Note title="Mock USDC on devnet">
-            Your wallet needs devnet SOL for fees and this market’s mock USDC.
-            The app does not hold an operator key or mint tokens.
+          <Note title="Before you stake">
+            Option names stay sealed, so pick an index only if you know which
+            team it is, or add your own. You need devnet SOL and this market’s
+            mock USDC. Later you claim to a fresh address with a new proof.
           </Note>
         </aside>
       </div>

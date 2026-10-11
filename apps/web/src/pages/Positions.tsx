@@ -16,6 +16,7 @@ import {
 import { amount } from "../lib/amounts";
 import { useAction } from "../lib/hooks";
 import { Feedback, Frame, Note, PageTitle, Pill } from "../components/ui";
+import { Steps } from "../components/roles";
 import { proving } from "./Stake";
 export default function Positions() {
   const wallet = useWallet(),
@@ -97,11 +98,8 @@ export default function Positions() {
         Position records stay on this device. Claim to an address you choose
         after settlement.
       </PageTitle>
-      {!scout && (
-        <Note title="Restore your private identity">
-          <Link to="/scout/onboard">Open scout onboarding</Link>
-        </Note>
-      )}
+
+      <Steps role="scout" at={2} />
       <div className="positions-layout">
         <div className="stack">
           <Frame>
@@ -209,6 +207,11 @@ export default function Positions() {
           </Frame>
         </div>
         <div className="stack positions-list">
+          {!scout && (
+        <Note title="Restore your private identity">
+          <Link to="/scout/onboard">Open scout onboarding</Link>
+        </Note>
+      )}
           {!records.length && (
             <Note title="No positions saved on this device">
               Stake in an open market or recover positions using your identity

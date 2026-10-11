@@ -357,6 +357,15 @@ This revision overrides any earlier text in this file that conflicts with it.
 - **Every sealed value explains itself.** Hover or keyboard focus on a `Cipher` opens a "Why is this locked?" pop-up with a reason specific to that attribute (`reason` prop).
 - **One viewport.** `/create` (fields share rows in 2, 3 and 5 column grids) and `/admin` (three columns) now fit one 1440×900 viewport, alongside `/scout/onboard` and `/scout/positions`.
 
+### Role-based app shell (11 Oct, after an impeccable critique)
+
+- **Pages are grouped by role.** The header holds a role switcher: Buyer, Scout, Team, Operator. Under it, a role bar states who the role is, what it does, and lists that role's pages. Buyer: Markets to buy, Walkthrough with demo data, Open a market. Scout: Get verified, Markets to back (`/scout`), My positions and claims. The definitions live in `apps/web/src/components/roles.tsx`.
+- **Every app page opens with an ultramarine banner** (one sentence of purpose plus up to three real stats, following app.reckonz.xyz/receipts). A numbered step strip shows where the page sits in its role's flow.
+- **Markets is a compact table, not a card wall.** Columns are the buyer's question, stage, backing so far (calls, USDC staked, measured spread) and price. One action per row matches the stage. Stage filters are chips.
+- **Market questions are shown.** Only the hash is onchain, so the server stores question text and accepts it only when keccak(text) matches `question_hash` (`POST /v1/markets/:id/question`; Create publishes it automatically).
+- **The spread is measured, never vague.** "Near the top" means at least 50% of the leading option's weighted stake, "middle" 20–50%, "trailing" under 20% (from the `preview` circuit). Do not use strong/medium/weak without these definitions.
+- **Pitfall:** Tailwind's `outline` utility collides with the `.button.outline` class and adds a 3px ring. `.button.outline:not(:focus-visible) { outline: none }` fixes it; do not rename back.
+
 ## Working with Dien on design
 
 - Reply to Dien in Indonesian. Keep explanations short and concrete.

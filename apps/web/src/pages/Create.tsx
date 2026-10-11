@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { anchor, queueAndWait, arciumAccounts, PROGRAM_ID } from "@bisik/sdk";
 import { keccak, utf8 } from "@bisik/shared";
 import { useWallet } from "../lib/wallet";
+import { api } from "../lib/api";
 import {
   P,
   TOKEN_PROGRAM_ID,
@@ -116,6 +117,8 @@ export default function Create() {
                       .instruction(),
                   );
                   await send(provider, ixs);
+                  // Publish the question text; the server checks it against the onchain hash.
+                  await api(`/markets/${id}/question`, { question }).catch(() => undefined);
                   const cluster = Number(
                     import.meta.env.VITE_ARCIUM_CLUSTER_OFFSET || 456,
                   );

@@ -12,6 +12,7 @@ import { useWallet } from "../lib/wallet";
 import { short, remaining } from "../lib/amounts";
 import { useAction } from "../lib/hooks";
 import { network } from "../lib/storage";
+import { RoleTabs } from "./roles";
 export function Icon({ name = "arrow" }: { name?: string }) {
   const paths: Record<string, ReactNode> = {
     moon: <path d="M20 14a8 8 0 0 1-10-10 8 8 0 1 0 10 10Z" />,
@@ -147,10 +148,12 @@ export function PageTitle({
   children?: ReactNode;
 }) {
   return (
-    <div className="page-title">
-      <h1>{title}</h1>
-      {children && <p>{children}</p>}
-    </div>
+    <section className="banner">
+      <div className="banner-copy">
+        <h1>{title}</h1>
+        {children && <p>{children}</p>}
+      </div>
+    </section>
   );
 }
 export function Header({ landing = false }: { landing?: boolean }) {
@@ -181,14 +184,7 @@ export function Header({ landing = false }: { landing?: boolean }) {
                 )}
               </nav>
             ) : (
-              <nav aria-label="App">
-                <NavLink to="/markets">Markets</NavLink>
-                <NavLink to="/scout/onboard">Scout</NavLink>
-                <NavLink to="/scout/positions">Positions</NavLink>
-                <NavLink to="/create">Create</NavLink>
-                <NavLink to="/team">Team</NavLink>
-                <NavLink to="/admin">Admin</NavLink>
-              </nav>
+              <RoleTabs />
             )}
           </div>
           <div className="header-actions">
@@ -379,12 +375,12 @@ export function StrengthBars({
 }) {
   const max = Math.max(1, strong, medium, weak);
   const rows: [string, number, string][] = [
-    ["Strong", strong, "strong"],
-    ["Medium", medium, "medium"],
-    ["Weak", weak, "weak"],
+    ["Near the top", strong, "strong"],
+    ["Middle", medium, "medium"],
+    ["Trailing", weak, "weak"],
   ];
   return (
-    <div className="strength-bars" role="img" aria-label={`Strong ${strong}, medium ${medium}, weak ${weak}`}>
+    <div className="strength-bars" role="img" aria-label={`${strong} options near the top, ${medium} in the middle, ${weak} trailing`}>
       {rows.map(([label, n, cls]) => (
         <div className="strength-row" key={label}>
           <span>{label}</span>

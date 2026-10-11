@@ -37,6 +37,7 @@ import {
   StrengthBars,
   StatusStrip,
 } from "../components/ui";
+import { Steps } from "../components/roles";
 const cluster = Number(import.meta.env.VITE_ARCIUM_CLUSTER_OFFSET || 456);
 const mockMarket: Market = {
   id: 3,
@@ -251,9 +252,18 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
           : undefined;
   return (
     <>
-      <PageTitle title={`Which options will ship next?`}>
-        Market {market.id} in the builder sourcing use case, on Solana devnet.
+      <PageTitle
+        title={
+          demo
+            ? "Which DeFi teams are worth courting before they pick a chain?"
+            : (market.question ?? `Market ${market.id}`)
+        }
+      >
+        Market {market.id}. You are the buyer. Read the public spread, bid for
+        exclusivity, then decrypt your own view of who scouts backed and why.
       </PageTitle>
+
+      <Steps role="buyer" at={1} />
       {demo && (
         <Note title="Synthetic demo data">
           This is an interactive design walkthrough. Team names, reasons and
@@ -295,7 +305,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
             {!revealed && (
               <Note title="Market-wide preview">
                 {market.preview
-                  ? `${market.preview.backed} options backed. ${market.preview.strong} strong, ${market.preview.medium} medium, ${market.preview.weak} weak.`
+                  ? `${market.preview.backed} options are backed. Near the top means at least half the stake of the leading option, middle 20 to 50 percent of it, trailing under 20 percent. Which team holds which share stays sealed.`
                   : "Available after submissions close and MPC finishes the preview."}
                 {market.preview && (
                   <StrengthBars
@@ -325,13 +335,6 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                     ) : (
                       <Pill state="sealed">Team sealed</Pill>
                     )}
-                  </div>
-                  <div className="signal-strip">
-                    <Sonogram
-                      variant={revealed ? "revealed" : "sealed"}
-                      seed={revealed ? 3 + o.index * 6 : 7}
-                      speed={revealed ? 17 + o.index * 6 : 26}
-                    />
                   </div>
                   {revealed ? (
                     <div className="revealed-content stack">
@@ -368,7 +371,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                     </div>
                   ) : (
                     <div className="row">
-                      <Hatch reason="The scouts’ reasons for this option stay sealed until you win or buy access. Your allocation then lets you decrypt them with your own key." />
+                      <Hatch seed={o.index + 3} reason="The scouts’ reasons for this option stay sealed until you win or buy access. Your allocation then lets you decrypt them with your own key." />
                       <Pill state="sealed">Sealed</Pill>
                     </div>
                   )}

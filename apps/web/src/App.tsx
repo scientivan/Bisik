@@ -9,6 +9,7 @@ import {
 import { ThemeProvider } from "./lib/theme";
 import { WalletProvider } from "./lib/wallet";
 import { Header, Note } from "./components/ui";
+import { RoleBar } from "./components/roles";
 import { usePageMotion } from "./lib/motion";
 import Landing from "./pages/Landing";
 const Markets = lazy(() => import("./pages/Markets")),
@@ -52,6 +53,7 @@ function Content() {
   return (
     <Boundary>
       {!landing && <Header />}
+      {!landing && <RoleBar />}
       <div
         className={landing ? "" : "container page"}
         id={landing ? undefined : "main"}
@@ -64,6 +66,7 @@ function Content() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/markets" element={<Markets />} />
+            <Route path="/scout" element={<Markets role="scout" />} />
             <Route path="/markets/:id" element={<Stake />} />
             <Route path="/scout/onboard" element={<Onboard />} />
             <Route path="/scout/positions" element={<Positions />} />

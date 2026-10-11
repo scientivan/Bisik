@@ -11,6 +11,7 @@ import {
 } from "../lib/storage";
 import { useAction } from "../lib/hooks";
 import { Feedback, Frame, Note, PageTitle, Pill } from "../components/ui";
+import { Steps } from "../components/roles";
 export default function Onboard() {
   const [scout, setScout] = useState<Scout | null>(() => read("scout", null)),
     [status, setStatus] = useState(""),
@@ -47,6 +48,8 @@ export default function Onboard() {
         Create a private identity on this device, prove your GitHub record and
         join a tier group.
       </PageTitle>
+
+      <Steps role="scout" at={0} />
       <div className="columns">
         <div className="main-column stack">
           <Frame>

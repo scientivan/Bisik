@@ -166,6 +166,8 @@ export function createApp(d: Deps) {
     flatPrice: Number(m.flatPrice),
     // Market-wide histogram only: how many options are backed, and how many fall in each strength bucket.
     // It never says which option is strong, so it is safe to show before purchase.
+    totalStaked: Number(m.totalStaked ?? 0),
+    question: (d.db.prepare("SELECT question FROM market_questions WHERE market_id=?").get(Number(m.id)) as any)?.question ?? null,
     preview: m.status >= 2 ? { backed: m.preview[0], weak: m.preview[1], medium: m.preview[2], strong: m.preview[3] } : null,
   });
   const MARKET_TTL_MS = 10_000;
@@ -190,6 +192,22 @@ export function createApp(d: Deps) {
       .filter((m) => !status || m.status === status)
       .sort((a, b) => b.id - a.id);
     return c.json({ markets: list });
+  });
+  /**
+   * Publish a market's question text. Only its keccak hash is onchain; anyone may publish the text,
+   * and the server accepts it only if it hashes to the onchain question_hash.
+   */
+  app.post("/v1/markets/:id/question", async (c) => {
+    if (!d.chain) return c.json({ error: "chain not configured" }, 503);
+    const id = Number(c.req.param("id"));
+    const { question } = await c.req.json();
+    if (typeof question !== "string" || !question.trim() || question.length > 500) return c.json({ error: "question must be 1–500 characters" }, 400);
+    const m = await d.chain.fetchMarket(id);
+    if (!m) return c.json({ error: "not found" }, 404);
+    if (toHex(keccak(utf8(question))) !== toHex(Uint8Array.from(m.questionHash))) return c.json({ error: "question does not match the onchain hash" }, 400);
+    d.db.prepare("INSERT OR REPLACE INTO market_questions (market_id, question, created_at) VALUES (?,?,?)").run(id, question, Date.now());
+    marketCache = null;
+    return c.json({ ok: true });
   });
   app.get("/v1/markets/:id", async (c) => {
     if (!d.chain) return c.json({ error: "chain not configured" }, 503);

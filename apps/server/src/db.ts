@@ -30,6 +30,7 @@ export function openDb(path: string): DB {
     CREATE INDEX IF NOT EXISTS reasons_by_hash ON reasons (market_id, reason_hash);
     CREATE TABLE IF NOT EXISTS summaries (market_id INTEGER NOT NULL, option_index INTEGER NOT NULL, json TEXT NOT NULL,
       PRIMARY KEY (market_id, option_index));
+    CREATE TABLE IF NOT EXISTS market_questions (market_id INTEGER PRIMARY KEY, question TEXT NOT NULL, created_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS nonces (nonce TEXT PRIMARY KEY, pubkey TEXT NOT NULL, created_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS intros (
       id TEXT PRIMARY KEY, market_id INTEGER NOT NULL, option_index INTEGER NOT NULL, buyer TEXT NOT NULL,
