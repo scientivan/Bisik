@@ -27,6 +27,8 @@ export const env = {
   publicUrl: process.env.SERVER_PUBLIC_URL ?? "http://localhost:8787",
   dbPath: process.env.SERVER_DB_PATH ?? "./data/bisik.sqlite",
   rpcUrl: process.env.SOLANA_RPC_URL ?? "http://127.0.0.1:8899",
+  // Account scans (getProgramAccounts) are not available on every RPC plan (for example Alchemy free tier).
+  scanRpcUrl: process.env.SOLANA_SCAN_RPC_URL ?? process.env.SOLANA_RPC_URL ?? "http://127.0.0.1:8899",
   clusterOffset: Number(process.env.ARCIUM_CLUSTER_OFFSET ?? 0),
   operatorKeypairPath: keypairPath(),
   platformSalt: () => req("PLATFORM_SALT"),

@@ -8,7 +8,7 @@ import { Veritas } from "@bisik/veritas";
 const db = openDb(env.dbPath);
 let chain = null;
 try {
-  chain = solanaChain(env.rpcUrl, env.operatorKeypairPath);
+  chain = solanaChain(env.rpcUrl, env.operatorKeypairPath, env.scanRpcUrl);
 } catch (e) {
   console.warn("chain disabled:", (e as Error).message);
 }

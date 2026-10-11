@@ -21,11 +21,13 @@ export interface Chain {
   fetchSignalReveal?(marketId: number, buyer: PublicKey): Promise<any | null>;
 }
 
-export function solanaChain(rpcUrl: string, keypairPath: string): Chain {
+export function solanaChain(rpcUrl: string, keypairPath: string, scanRpcUrl = rpcUrl): Chain {
   const operator = Keypair.fromSecretKey(new Uint8Array(JSON.parse(readFileSync(keypairPath, "utf8"))));
   const conn = new Connection(rpcUrl, "confirmed");
   const provider = makeProvider(conn, operator);
   const program: any = mkProgram(provider);
+  // Separate read-only program for getProgramAccounts scans, so the main RPC can be a plan without them.
+  const scanProgram: any = scanRpcUrl === rpcUrl ? program : mkProgram(makeProvider(new Connection(scanRpcUrl, "confirmed"), operator));
   const P = pdas(PROGRAM_ID);
   const send = (b: any) => b.signers([operator]).rpc({ commitment: "confirmed", skipPreflight: true });
   return {
@@ -38,10 +40,17 @@ export function solanaChain(rpcUrl: string, keypairPath: string): Chain {
       send(program.methods.registerBuyer(authority, Array.from(h)).accounts({ operator: operator.publicKey, config: P.config(), buyer: P.buyer(authority) })),
     currentEpoch: async () => ((await program.account.config.fetch(P.config())) as any).currentEpoch as number,
     fetchMarket: async (id) => (await program.account.market.fetchNullable(P.market(id))) as any,
-    fetchMarkets: async () => ((await program.account.market.all()) as any[]).map((a) => a.account),
+    // Markets are PDAs indexed 0..market_count-1, so the list needs no account scan.
+    fetchMarkets: async () => {
+      const count = Number(((await program.account.config.fetch(P.config())) as any).marketCount);
+      const keys = Array.from({ length: count }, (_, i) => P.market(i));
+      const out: any[] = [];
+      for (let i = 0; i < keys.length; i += 100) out.push(...(await program.account.market.fetchMultiple(keys.slice(i, i + 100))));
+      return out.filter(Boolean);
+    },
     fetchPositions: async (id) => {
       const market = P.market(id);
-      const all = await program.account.position.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
+      const all = await scanProgram.account.position.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
       return all.map((a: any) => ({ pubkey: a.publicKey, ...a.account }));
     },
     fetchSignalReveal: async (id, buyer) => {

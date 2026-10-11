@@ -23,6 +23,9 @@ const operator = Keypair.fromSecretKey(new Uint8Array(JSON.parse(process.env.OPE
 const conn = new Connection(RPC, "confirmed");
 const provider = makeProvider(conn, operator);
 const program: any = mkProgram(provider);
+// getProgramAccounts scans go to a separate RPC when the main plan does not allow them (for example Alchemy free tier).
+const SCAN_RPC = process.env.SOLANA_SCAN_RPC_URL ?? RPC;
+const scan: any = SCAN_RPC === RPC ? program : mkProgram(makeProvider(new Connection(SCAN_RPC, "confirmed"), operator));
 const P = pdas(PROGRAM_ID);
 const now = () => Math.floor(Date.now() / 1000);
 const log = (...a: unknown[]) => console.log(new Date().toISOString().slice(11, 19), ...a);
@@ -73,7 +76,7 @@ async function step(pubkey: PublicKey, m: any): Promise<string | null> {
 
   if (m.status === Status.Open) {
     if (m.allocatedCount < m.positionCount && !m.aggBusy) {
-      const ps = await program.account.position.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
+      const ps = await scan.account.position.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
       const next = ps.find((p: any) => !p.account.allocated);
       if (next) {
         await queue("allocate", (o) => program.methods.allocatePosition(o).accountsPartial({ payer: operator.publicKey, market, agg, position: next.publicKey, ...arc(o, "allocate") }));
@@ -100,7 +103,7 @@ async function step(pubkey: PublicKey, m: any): Promise<string | null> {
   }
   if (m.status === Status.Allocated) {
     if (m.kind === Kind.Auction) {
-      const bids = await program.account.bid.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
+      const bids = await scan.account.bid.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
       const open = bids.find((b: any) => !b.account.refunded);
       if (open) {
         const mint = (await program.account.config.fetch(P.config())).usdcMint as PublicKey;
@@ -140,7 +143,7 @@ async function step(pubkey: PublicKey, m: any): Promise<string | null> {
     return null;
   }
   if (m.status === Status.Settling) {
-    const ps = await program.account.position.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
+    const ps = await scan.account.position.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
     const next = ps.find((p: any) => !p.account.settled && !p.account.settleBusy);
     if (!next) return null;
     if (next.account.slashed) {
@@ -167,7 +170,7 @@ async function creditReputation(market: PublicKey, marketId: number): Promise<vo
   const rep = P.reputation();
   const r: any = await program.account.reputation.fetchNullable(rep);
   if (!r || !r.ready || r.busy) return;
-  const ps = await program.account.position.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
+  const ps = await scan.account.position.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
   for (const p of ps) {
     if (!p.account.settled) continue;
     const repCredit = P.repCredit(p.publicKey);
@@ -181,7 +184,7 @@ async function creditReputation(market: PublicKey, marketId: number): Promise<vo
 }
 
 async function tick() {
-  const markets = await program.account.market.all();
+  const markets = await scan.account.market.all();
   for (const { publicKey, account } of markets) {
     if (account.status === Status.Settled) {
       if (!account.feesWithdrawn && (account.pools as any[]).some((x) => Number(x) > 0)) {

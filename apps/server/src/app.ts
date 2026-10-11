@@ -168,9 +168,22 @@ export function createApp(d: Deps) {
     // It never says which option is strong, so it is safe to show before purchase.
     preview: m.status >= 2 ? { backed: m.preview[0], weak: m.preview[1], medium: m.preview[2], strong: m.preview[3] } : null,
   });
+  const MARKET_TTL_MS = 10_000;
+  let marketCache: { at: number; data: any[] } | null = null;
   app.get("/v1/markets", async (c) => {
     if (!d.chain) return c.json({ error: "chain not configured" }, 503);
-    const all = await d.chain.fetchMarkets();
+    // Short cache: the list changes only when the keeper moves a market. On RPC failure, serve the last good list.
+    let all: any[];
+    if (marketCache && Date.now() - marketCache.at < MARKET_TTL_MS) all = marketCache.data;
+    else {
+      try {
+        all = await d.chain.fetchMarkets();
+        marketCache = { at: Date.now(), data: all };
+      } catch (e) {
+        if (!marketCache) throw e;
+        all = marketCache.data;
+      }
+    }
     const status = c.req.query("status");
     const list = all
       .map(marketSummary)
