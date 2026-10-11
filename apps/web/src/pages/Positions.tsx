@@ -29,7 +29,7 @@ export default function Positions() {
     [recoverMarket, setRecoverMarket] = useState(""),
     [intros, setIntros] = useState<any[]>([]),
     [picked, setPicked] = useState<PositionRecord | null>(null),
-    [contact, setContact] = useState(""),
+    [contacts, setContacts] = useState<Record<string, string>>({}),
     [disputeId, setDisputeId] = useState(""),
     [response, setResponse] = useState("");
   const key = (r: PositionRecord) => `${r.marketId}:${r.nullifier}`;
@@ -239,13 +239,15 @@ export default function Positions() {
                   <div className="list-row">
                     <span>Stake</span>
                     <strong>
-                      {state ? amount(state.amount) : "Unavailable"} USDC
+                      {state ? `${amount(state.amount)} USDC` : "Not loaded yet"}
                     </strong>
                   </div>
                   <div className="list-row">
                     <span>Reward</span>
                     <strong>
-                      {state?.settled ? amount(state.payout) : "Pending"} USDC
+                      {state?.settled
+                        ? `${amount(state.payout)} USDC`
+                        : "After settlement"}
                     </strong>
                   </div>
                   <div className="row">
@@ -321,6 +323,11 @@ export default function Positions() {
                     <button
                       className="button small outline"
                       disabled={!!action.busy || r.optionIndex < 0}
+                      title={
+                        r.optionIndex < 0
+                          ? "This position was recovered from the chain. Its team pick is encrypted, so introductions can only be checked on the device that staked it."
+                          : undefined
+                      }
                       onClick={() =>
                         action.run(
                           "Checking introduction requests",
@@ -340,7 +347,11 @@ export default function Positions() {
                     </button>
                     <button
                       className="button small outline"
-                      onClick={() => setPicked(r)}
+                      onClick={() => {
+                        // Intro requests belong to the previously picked position; never carry them over.
+                        setIntros([]);
+                        setPicked(r);
+                      }}
                     >
                       Respond to a dispute
                     </button>
@@ -373,14 +384,16 @@ export default function Positions() {
                       <span>Contact to share with this buyer</span>
                       <textarea
                         rows={3}
-                        value={contact}
-                        onChange={(e) => setContact(e.target.value)}
+                        value={contacts[i.id] ?? ""}
+                        onChange={(e) =>
+                          setContacts({ ...contacts, [i.id]: e.target.value })
+                        }
                       />
                     </label>
                     <div className="row">
                       <button
                         className="button small"
-                        disabled={!!action.busy || !contact.trim()}
+                        disabled={!!action.busy || !(contacts[i.id] ?? "").trim()}
                         onClick={() =>
                           action.run(
                             "Encrypting your introduction response",
@@ -388,7 +401,7 @@ export default function Positions() {
                               const { sealContact } =
                                   await import("../lib/contact"),
                                 cipher = await sealContact(
-                                  contact,
+                                  contacts[i.id],
                                   i.buyer_x25519,
                                 );
                               const proof = await ownership(picked, "intro", {

@@ -20,17 +20,24 @@ export default function Onboard() {
     write("scout", next);
     setScout(next);
   }
-  async function poll() {
-    if (!scout?.sessionId) return;
-    const r = await api(`/identity/reclaim-session/${scout.sessionId}`);
+  // Returns true when polling should stop (verified or rejected).
+  async function poll(): Promise<boolean> {
+    const current = read<Scout | null>("scout", null);
+    if (!current?.sessionId) return true;
+    const r = await api(`/identity/reclaim-session/${current.sessionId}`);
     setStatus(r.status === "REJECTED" ? r.error : r.status);
-    if (r.result)
-      save({ ...scout, tier: r.result.tier, epoch: r.result.epoch });
+    if (r.result) {
+      save({ ...current, tier: r.result.tier, epoch: r.result.epoch });
+      return true;
+    }
+    return r.status === "REJECTED";
   }
   useEffect(() => {
     if (!scout?.sessionId || scout.tier !== undefined) return;
     const timer = setInterval(() => {
-      void poll().catch((e) => setStatus(e.message));
+      poll()
+        .then((done) => done && clearInterval(timer))
+        .catch((e) => setStatus(e.message));
     }, 5000);
     return () => clearInterval(timer);
   }, [scout?.sessionId, scout?.tier]);
@@ -175,7 +182,9 @@ export default function Onboard() {
                       <button
                         className="button outline"
                         onClick={() =>
-                          action.run("Checking verification", poll)
+                          action.run("Checking verification", async () => {
+                            await poll();
+                          })
                         }
                         disabled={!!action.busy}
                       >
