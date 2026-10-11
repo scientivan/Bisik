@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bisik landing</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!--
+THESIS: Bisik's mechanism is the product. Insider calls stay sealed while they are staked, aggregated, auctioned and paid. Refuses the dark neon crypto landing and the dossier look.
+OWN-WORLD: printed sonogram on a fine cell grid. Bone #F3F2EC, ink #111318, ultramarine #2A2FD0, amber #FFB547 only for values revealed to you. Pixel-block band fields, 14px cards with an inset panel holding a live UI fragment, SF Pro at 500 and up, no tinted translucent fills, no labels stacked above headings.
+STORY: a judge sees a whisper that resolves only for the paying buyer, meets the four parts, sees who gets paid, opens the app.
+FIRST VIEWPORT: full-bleed ultramarine sonogram streaming right to left, headline and actions top-left, amber revealed stream right of a fixed reveal line, lifecycle rail along the bottom.
+MOTION: one focal stream (signals flow right to left through the reveal line); sections decrypt in with a clip-path wipe as they scroll in; sealed hatches march; members pulse in turn.
+FORM: grounded candidate 5 (whisper sonogram), seed a44053e7.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+-->
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#F3F2EC}
+a{color:#111318}a:hover{color:#2A2FD0}
+::selection{background:#FFB547;color:#111318}
+a:focus-visible,button:focus-visible{outline:2px solid #2A2FD0;outline-offset:3px;border-radius:8px}
+.bisik-grid{background-color:#F3F2EC;background-image:linear-gradient(#E6E5DC 1px,transparent 1px),linear-gradient(90deg,#E6E5DC 1px,transparent 1px);background-size:32px 32px;background-position:-1px -1px}
+@keyframes bisikStream{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.bisik-stream{animation:bisikStream 48s linear infinite}
+.bisik-stream-fast{animation:bisikStream 22s linear infinite}
+.bisik-stream-slow{animation:bisikStream 90s linear infinite}
+@keyframes bisikHatch{from{background-position:0 0}to{background-position:24px 0}}
+.bisik-hatch{background:repeating-linear-gradient(90deg,#111318 0 3px,#C9C8BF 3px 6px);animation:bisikHatch 1.6s linear infinite}
+@keyframes bisikPulse{0%,70%,100%{transform:scale(1);background-color:#2A2FD0}35%{transform:scale(1.12);background-color:#111318}}
+.bisik-member{animation:bisikPulse 4.2s cubic-bezier(.16,1,.3,1) infinite}
+@keyframes bisikDecrypt{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.bisik-reveal{animation:bisikDecrypt 1.4s cubic-bezier(.16,1,.3,1) .2s both}
+@keyframes bisikGrow{from{transform:scaleY(.08)}to{transform:scaleY(1)}}
+@keyframes bisikFill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@supports (animation-timeline: view()){
+.bisik-in{animation:bisikDecrypt linear both;animation-timeline:view();animation-range:entry 0% cover 28%}
+.bisik-grow{transform-origin:bottom;animation:bisikGrow linear both;animation-timeline:view();animation-range:entry 10% cover 35%}
+.bisik-fill{transform-origin:left;animation:bisikFill linear both;animation-timeline:view();animation-range:entry 10% cover 40%}
+}
+@media (prefers-reduced-motion: reduce){.bisik-stream,.bisik-stream-fast,.bisik-stream-slow,.bisik-hatch,.bisik-member,.bisik-reveal,.bisik-in,.bisik-grow,.bisik-fill{animation:none}}
+</style>
+</helmet>
+<div class="bisik-grid" style="color: #111318; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, 'Helvetica Neue', sans-serif; font-size: 17px; font-weight: 500; line-height: 1.5; font-variant-numeric: tabular-nums">
+
+<header style="position: relative; z-index: 2; background: #2A2FD0; color: #F3F2EC">
+<div style="max-width: 1280px; margin: 0 auto; padding: 16px 32px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 36px">
+<a href="#top" style="display: flex; align-items: center; gap: 10px; color: #F3F2EC; text-decoration: none" aria-label="Bisik home">
+<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="8" width="3" height="6" rx="1.5" fill="#F3F2EC"></rect><rect x="7" y="3" width="3" height="16" rx="1.5" fill="#F3F2EC"></rect><rect x="13" y="6" width="3" height="10" rx="1.5" fill="#FFB547"></rect><rect x="19" y="9" width="2" height="4" rx="1" fill="#F3F2EC"></rect></svg>
+<span style="font-size: 22px; font-weight: 800; letter-spacing: -0.03em">bisik</span>
+</a>
+<nav aria-label="Primary" style="display: flex; flex-wrap: wrap; gap: 28px; font-size: 15px; font-weight: 600">
+<a href="#mechanism" style="color: #E9EAFB; text-decoration: none">Mechanism</a>
+<a href="#parts" style="color: #E9EAFB; text-decoration: none">Parts</a>
+<a href="#payouts" style="color: #E9EAFB; text-decoration: none">Payouts</a>
+<a href="#flow" style="color: #E9EAFB; text-decoration: none">Flow</a>
+<a href="#source" style="color: #E9EAFB; text-decoration: none">Source</a>
+</nav>
+</div>
+<a href="Market.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; background: #F3F2EC; color: #111318; border-radius: 10px; font-weight: 700; font-size: 15px; text-decoration: none">Open the app</a>
+</div>
+</header>
+
+<section id="top" aria-label="Introduction" style="position: relative; background: #2A2FD0; color: #F3F2EC; overflow: hidden">
+<div aria-hidden="true" style="position: absolute; top: 0; bottom: 64px; left: 0; right: 26%; overflow: hidden">
+<div class="bisik-stream" style="display: flex; gap: 2px; width: 200%; height: 100%">
+<sc-for list="{{hero}}" as="c" hint-placeholder-count="130">
+<div style="flex: 1 1 0; height: 100%; background: {{c.bg}}"></div>
+</sc-for>
+</div>
+</div>
+<div aria-hidden="true" class="bisik-reveal" style="position: absolute; top: 0; bottom: 64px; left: 74%; right: 0; overflow: hidden">
+<div class="bisik-stream-fast" style="display: flex; gap: 2px; width: 200%; height: 100%">
+<sc-for list="{{heroRevealed}}" as="c" hint-placeholder-count="64">
+<div style="flex: 1 1 0; height: 100%; background: {{c.bg}}"></div>
+</sc-for>
+</div>
+</div>
+<div aria-hidden="true" style="position: absolute; top: 0; bottom: 64px; left: 74%; width: 3px; background: #FFB547"></div>
+<div aria-hidden="true" style="position: absolute; top: 24px; left: calc(74% + 16px); display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; background: #FFB547; color: #111318; font-size: 14px; font-weight: 700">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111318" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 7.5-2"></path></svg>
+Decrypted for Ecosystem A
+</div>
+
+<div style="position: relative; max-width: 1280px; margin: 0 auto; padding: 112px 32px 184px; display: flex; flex-direction: column; gap: 28px">
+<h1 style="margin: 0; max-width: 760px; font-size: 80px; line-height: 0.98; font-weight: 700; letter-spacing: -0.04em; text-wrap: balance">Insiders whisper. Buyers pay to listen.</h1>
+<p style="margin: 0; max-width: 560px; font-size: 21px; line-height: 1.45; font-weight: 500; color: #F3F2EC">Bisik is a private signal market on Solana. Insiders stake behind a call and say why. Buyers bid to read the aggregate. Who said what stays sealed the whole way through.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 12px">
+<a href="Market.dc.html" style="display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 24px; background: #F3F2EC; color: #111318; border-radius: 12px; font-weight: 700; text-decoration: none">Open the app
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111318" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+<a href="#mechanism" style="display: inline-flex; align-items: center; min-height: 52px; padding: 0 24px; background: #3B40DA; border: 1px solid #6E72E6; color: #F3F2EC; border-radius: 12px; font-weight: 600; text-decoration: none">See the mechanism</a>
+</div>
+<p style="margin: 0; font-size: 16px; font-weight: 500; color: #E2E3FA">Live on Solana devnet with Arcium MPC. The first use case is ecosystems sourcing builder teams before they pick a chain.</p>
+</div>
+
+<div style="position: relative; height: 64px; background: #1B1F96">
+<ol aria-label="Market lifecycle" style="max-width: 1280px; height: 100%; margin: 0 auto; padding: 0 32px; list-style: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; gap: 12px">
+<sc-for list="{{rail}}" as="s" hint-placeholder-count="5">
+<li style="display: flex; align-items: baseline; gap: 8px; font-size: 15px; color: {{s.color}}"><span style="font-weight: 700">{{s.stage}}</span><span style="font-weight: 500">{{s.what}}</span></li>
+</sc-for>
+</ol>
+</div>
+</section>
+
+<section id="mechanism" class="bisik-in" style="max-width: 1280px; margin: 0 auto; padding: 120px 32px 40px">
+<div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: center">
+<div style="flex: 1 1 400px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<h2 style="margin: 0; font-size: 52px; line-height: 1.02; font-weight: 700; letter-spacing: -0.035em; text-wrap: balance">Three secrets, kept apart.</h2>
+<p style="margin: 0; max-width: 470px; font-size: 19px; color: #2B2E36">Who you are, what you picked and what you bid never sit in the same place. Identity is a zero-knowledge proof. Picks and bids are ciphertext that only MPC can add up.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<span style="padding: 8px 14px; border-radius: 999px; background: #111318; color: #F3F2EC; font-size: 15px; font-weight: 700">Sealed</span>
+<span style="padding: 8px 14px; border-radius: 999px; background: #FFB547; color: #111318; font-size: 15px; font-weight: 700">Yours</span>
+<span style="padding: 7px 13px; border-radius: 999px; border: 1px solid #111318; background: #FBFAF6; color: #111318; font-size: 15px; font-weight: 700">Public</span>
+</div>
+</div>
+<figure style="flex: 1 1 580px; min-width: 0; margin: 0; padding: 8px; border-radius: 18px; background: #E8E7DF; border: 1px solid #DCDBD2; box-shadow: 0 1px 2px rgba(17,19,24,0.06), 0 18px 40px -24px rgba(17,19,24,0.35)">
+<div style="border-radius: 12px; background: #FBFAF6; border: 1px solid #DCDBD2; overflow: hidden">
+<figcaption style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #E6E5DD">
+<span style="font-size: 17px; font-weight: 700">Position in market 3</span>
+<span style="font-size: 15px; font-weight: 600; color: #2B2E36">Solana devnet</span>
+</figcaption>
+<sc-for list="{{record}}" as="r" hint-placeholder-count="6">
+<div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) 86px; gap: 16px; align-items: center; padding: 14px 20px; border-bottom: 1px solid #EEEDE6">
+<span style="font-size: 16px; font-weight: 600; color: #2B2E36">{{r.field}}</span>
+<sc-if value="{{r.sealed}}" hint-placeholder-val="{{ true }}">
+<span class="bisik-hatch" style="height: 12px; width: {{r.w}}; border-radius: 6px" aria-label="sealed value"></span>
+</sc-if>
+<sc-if value="{{r.open}}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 17px; font-weight: 600; overflow-wrap: anywhere">{{r.value}}</span>
+</sc-if>
+<span style="justify-self: end; font-size: 14px; font-weight: 700; padding: 5px 10px; border-radius: 999px; border: 1px solid {{r.line}}; background: {{r.tagBg}}; color: {{r.tagFg}}">{{r.label}}</span>
+</div>
+</sc-for>
+</div>
+</figure>
+</div>
+</section>
+
+<section id="parts" class="bisik-in" style="max-width: 1280px; margin: 0 auto; padding: 100px 32px">
+<div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 36px; max-width: 720px">
+<h2 style="margin: 0; font-size: 52px; line-height: 1.02; font-weight: 700; letter-spacing: -0.035em">Four parts, one market.</h2>
+<p style="margin: 0; font-size: 20px; font-weight: 500; color: #2B2E36">Each part removes one thing you would otherwise have to trust. None of them sees the whole picture alone.</p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+
+<article style="padding: 8px; border-radius: 18px; background: #E8E7DF; border: 1px solid #DCDBD2; box-shadow: 0 1px 2px rgba(17,19,24,0.05), 0 14px 32px -24px rgba(17,19,24,0.3); display: flex; flex-direction: column">
+<div style="border-radius: 12px; background: #FBFAF6; border: 1px solid #DCDBD2; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 10px; background: #2A2FD0; color: #F3F2EC">
+<span style="display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>GitHub record verified</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #FFB547; color: #111318; font-size: 14px; font-weight: 700">Tier 2</span>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 10px; border: 1px solid #DCDBD2">
+<span style="font-size: 16px; font-weight: 600; color: #2B2E36">Username onchain</span>
+<span style="font-size: 16px; font-weight: 800">Never</span>
+</div>
+</div>
+<div style="padding: 18px 12px 10px; display: flex; flex-direction: column; gap: 6px">
+<h3 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em">Reclaim zkTLS</h3>
+<p style="margin: 0; font-size: 17px; color: #2B2E36">Proves a GitHub record. The server checks it offchain, and only a tier and a nullifier go onchain.</p>
+</div>
+</article>
+
+<article style="padding: 8px; border-radius: 18px; background: #E8E7DF; border: 1px solid #DCDBD2; box-shadow: 0 1px 2px rgba(17,19,24,0.05), 0 14px 32px -24px rgba(17,19,24,0.3); display: flex; flex-direction: column">
+<div style="border-radius: 12px; background: #FBFAF6; border: 1px solid #DCDBD2; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; gap: 8px" aria-hidden="true">
+<sc-for list="{{members}}" as="m" hint-placeholder-count="7">
+<span class="bisik-member" style="flex: 1 1 0; aspect-ratio: 1; max-width: 52px; border-radius: 999px; background: #2A2FD0; display: flex; align-items: center; justify-content: center; color: #F3F2EC; font-size: 17px; font-weight: 800; animation-delay: {{m.delay}}">?</span>
+</sc-for>
+</div>
+<div style="padding: 12px 14px; border-radius: 10px; border: 1px solid #DCDBD2; font-size: 16px; font-weight: 600">One of these seven staked. Nobody can tell which.</div>
+</div>
+<div style="padding: 18px 12px 10px; display: flex; flex-direction: column; gap: 6px">
+<h3 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em">Semaphore groups</h3>
+<p style="margin: 0; font-size: 17px; color: #2B2E36">You stake as one member of a tier group of at least five, with three calls per market at most.</p>
+</div>
+</article>
+
+<article style="padding: 8px; border-radius: 18px; background: #E8E7DF; border: 1px solid #DCDBD2; box-shadow: 0 1px 2px rgba(17,19,24,0.05), 0 14px 32px -24px rgba(17,19,24,0.3); display: flex; flex-direction: column">
+<div style="border-radius: 12px; background: #FBFAF6; border: 1px solid #DCDBD2; padding: 18px; display: flex; align-items: center; gap: 14px">
+<div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 8px" aria-hidden="true">
+<span class="bisik-hatch" style="height: 14px; width: 92%; border-radius: 7px"></span>
+<span class="bisik-hatch" style="height: 14px; width: 70%; border-radius: 7px; animation-duration: 2.2s"></span>
+<span class="bisik-hatch" style="height: 14px; width: 82%; border-radius: 7px; animation-duration: 1.2s"></span>
+</div>
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2A2FD0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+<div style="flex: 0 0 auto; padding: 14px 16px; border-radius: 10px; background: #2A2FD0; color: #F3F2EC; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 14px; font-weight: 600">Team Lumen</span>
+<span style="font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05">0.44</span>
+</div>
+</div>
+<div style="padding: 18px 12px 10px; display: flex; flex-direction: column; gap: 6px">
+<h3 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em">Arcium MPC</h3>
+<p style="margin: 0; font-size: 17px; color: #2B2E36">Adds up encrypted stakes into weights, runs the sealed auction and decrypts each buyer’s own view.</p>
+</div>
+</article>
+
+<article style="padding: 8px; border-radius: 18px; background: #E8E7DF; border: 1px solid #DCDBD2; box-shadow: 0 1px 2px rgba(17,19,24,0.05), 0 14px 32px -24px rgba(17,19,24,0.3); display: flex; flex-direction: column">
+<div style="border-radius: 12px; background: #FBFAF6; border: 1px solid #DCDBD2; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<p style="margin: 0; padding: 12px 14px; border-radius: 10px; border: 1px solid #DCDBD2; font-size: 17px; font-weight: 600; line-height: 1.5">Shipped a devnet prototype in week two. <span style="text-decoration: line-through; text-decoration-thickness: 2px; color: #7A7C83">I mentored them at Superteam Jakarta.</span></p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<span style="padding: 5px 11px; border-radius: 999px; background: #111318; color: #F3F2EC; font-size: 14px; font-weight: 700">Identifying detail removed</span>
+<span style="padding: 4px 10px; border-radius: 999px; border: 1px solid #111318; font-size: 14px; font-weight: 700">DRS 0.12</span>
+</div>
+</div>
+<div style="padding: 18px 12px 10px; display: flex; flex-direction: column; gap: 6px">
+<h3 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em">Veritas</h3>
+<p style="margin: 0; font-size: 17px; color: #2B2E36">Scores each reason for duplication and AI text, and strips details that could name the scout.</p>
+</div>
+</article>
+</div>
+</section>
+
+<section class="bisik-in" style="max-width: 1280px; margin: 0 auto; padding: 60px 32px 80px">
+<div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start">
+<div style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+<h2 style="margin: 0; font-size: 52px; line-height: 1.02; font-weight: 700; letter-spacing: -0.035em">Not a prediction market.</h2>
+<p style="margin: 0; font-size: 20px; color: #2B2E36">No loser pays a winner. Stakes come back in full, and rewards come only from what buyers pay.</p>
+</div>
+<ul style="flex: 1 1 620px; min-width: 0; margin: 0; padding: 8px; list-style: none; border-radius: 18px; background: #E8E7DF; border: 1px solid #DCDBD2; display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{rules}}" as="r" hint-placeholder-count="5">
+<li style="padding: 16px 18px; border-radius: 12px; background: #FBFAF6; border: 1px solid #DCDBD2; display: flex; align-items: center; gap: 16px">
+<span style="flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: {{r.iconBg}}" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{r.iconFg}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 19px; font-weight: 700">{{r.title}}</span><span style="font-size: 17px; color: #2B2E36">{{r.body}}</span></span>
+</li>
+</sc-for>
+</ul>
+</div>
+</section>
+
+<section id="payouts" class="bisik-in" style="max-width: 1280px; margin: 0 auto; padding: 100px 32px; display: flex; flex-direction: column; gap: 40px">
+<div style="display: flex; flex-direction: column; gap: 14px; align-items: center; text-align: center">
+<h2 style="margin: 0; font-size: 52px; line-height: 1.02; font-weight: 700; letter-spacing: -0.035em">Who gets paid, and when.</h2>
+<p style="margin: 0; max-width: 600px; font-size: 19px; color: #2B2E36">Every buyer payment is split onchain at settlement. These numbers are constants in the program.</p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px">
+<div style="grid-column: span 2; grid-row: span 2; position: relative; overflow: hidden; border-radius: 18px; background: #2A2FD0; color: #F3F2EC; padding: 28px; display: flex; flex-direction: column; justify-content: space-between; gap: 28px">
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 46%; overflow: hidden">
+<div class="bisik-stream-slow" style="display: flex; gap: 2px; width: 200%; height: 100%">
+<sc-for list="{{payBg}}" as="c" hint-placeholder-count="80">
+<div style="flex: 1 1 0; background: {{c.bg}}"></div>
+</sc-for>
+</div>
+</div>
+<div style="position: relative; display: flex; flex-direction: column; gap: 10px">
+<div class="bisik-fill" style="display: flex; height: 14px; border-radius: 7px; overflow: hidden" aria-hidden="true">
+<span style="width: 80%; background: #FFB547"></span><span style="width: 15%; background: #F3F2EC"></span><span style="width: 5%; background: #8A8EF0"></span>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: 600"><span>Scouts</span><span>Platform and team</span></div>
+</div>
+<div style="position: relative; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 128px; line-height: 0.85; font-weight: 800; letter-spacing: -0.05em">80%</span>
+<span style="font-size: 26px; font-weight: 700">goes to scouts</span>
+<span style="font-size: 18px; font-weight: 500; max-width: 440px">Weighted by how their calls turned out. It rises to 85% when no opted-in team takes its share.</span>
+</div>
+</div>
+<div style="border-radius: 18px; background: #FBFAF6; border: 1px solid #DCDBD2; padding: 26px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+<span style="font-size: 76px; line-height: 0.9; font-weight: 800; letter-spacing: -0.045em">15%</span>
+<span style="padding: 6px 12px; border-radius: 999px; background: #111318; color: #F3F2EC; font-size: 15px; font-weight: 700">Platform</span>
+</div>
+<span style="font-size: 20px; font-weight: 600; line-height: 1.35">Taken once, when the market settles.</span>
+</div>
+<div style="border-radius: 18px; background: #FBFAF6; border: 1px solid #DCDBD2; padding: 26px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+<span style="font-size: 76px; line-height: 0.9; font-weight: 800; letter-spacing: -0.045em">5%</span>
+<span style="padding: 6px 12px; border-radius: 999px; background: #6E72E6; color: #F3F2EC; font-size: 15px; font-weight: 700">Team</span>
+</div>
+<span style="font-size: 20px; font-weight: 600; line-height: 1.35">Paid to the winning team’s own wallet, if it opted in.</span>
+</div>
+<div style="grid-column: span 2; border-radius: 18px; background: #FFB547; padding: 24px; display: flex; align-items: center; gap: 22px">
+<span style="font-size: 56px; line-height: 1; font-weight: 800; letter-spacing: -0.04em">100%</span>
+<span style="font-size: 18px; font-weight: 600">of every stake returns. Only a proven hoax is slashed, and slashed funds go to charity.</span>
+</div>
+<div style="grid-column: span 4; border-radius: 18px; background: #111318; color: #F3F2EC; padding: 24px 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 20px">
+<span style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 48px; height: 48px; border-radius: 14px; background: #FFB547" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111318" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16.5v.5"></path></svg></span>
+<div style="flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 20px; font-weight: 700">Buyer payments are not refunded.</span>
+<span style="font-size: 17px; font-weight: 500; color: #DADCE2">If a buyer marks no successful option when the outcome window closes, their payment goes to the strongest signal they bought.</span>
+</div>
+</div>
+<div style="grid-column: span 4; border-radius: 18px; background: #FBFAF6; border: 1px solid #DCDBD2; padding: 18px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+<span style="font-size: 17px; font-weight: 700">Built on</span>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<sc-for list="{{stack}}" as="t" hint-placeholder-count="4">
+<span style="display: inline-flex; align-items: baseline; gap: 8px; padding: 10px 16px; border-radius: 12px; border: 1px solid #DCDBD2"><span style="font-size: 17px; font-weight: 700">{{t.name}}</span><span style="font-size: 15px; font-weight: 500; color: #2B2E36">{{t.role}}</span></span>
+</sc-for>
+</div>
+</div>
+</div>
+</section>
+
+<section id="flow" class="bisik-in" style="max-width: 1280px; margin: 0 auto; padding: 40px 32px 120px; display: flex; flex-direction: column; gap: 32px">
+<h2 style="margin: 0; font-size: 52px; line-height: 1.02; font-weight: 700; letter-spacing: -0.035em">One market, start to finish.</h2>
+<div style="position: relative; overflow: hidden; border-radius: 18px; background: #111318; color: #F3F2EC; padding: 36px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 24px">
+<div aria-hidden="true" style="position: absolute; inset: 0; overflow: hidden">
+<div class="bisik-stream-slow" style="display: flex; gap: 2px; width: 200%; height: 100%">
+<sc-for list="{{flowBg}}" as="c" hint-placeholder-count="180">
+<div style="flex: 1 1 0; background: {{c.bg}}"></div>
+</sc-for>
+</div>
+</div>
+<div style="position: relative; display: flex; flex-direction: column; gap: 10px; max-width: 620px">
+<h3 style="margin: 0; font-size: 38px; font-weight: 700; letter-spacing: -0.03em">Stake in the dark</h3>
+<p style="margin: 0; font-size: 18px; color: #E3E5EA">A scout proves their GitHub record once, joins an anonymous tier group, then backs up to three options per market with a refundable stake and a short reason.</p>
+</div>
+<a href="Stake.dc.html" style="position: relative; display: inline-flex; align-items: center; min-height: 48px; padding: 0 20px; border-radius: 12px; background: #F3F2EC; color: #111318; font-weight: 700; text-decoration: none">Try the stake flow</a>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+
+<article style="padding: 8px; border-radius: 18px; background: #E8E7DF; border: 1px solid #DCDBD2">
+<div style="border-radius: 12px; background: #FBFAF6; border: 1px solid #DCDBD2; padding: 18px; display: flex; align-items: flex-end; gap: 10px; height: 132px; box-sizing: border-box" aria-hidden="true">
+<span class="bisik-grow" style="flex: 1 1 0; height: 92%; border-radius: 6px; background: #2A2FD0"></span>
+<span class="bisik-grow" style="flex: 1 1 0; height: 64%; border-radius: 6px; background: #6E72E6"></span>
+<span class="bisik-grow" style="flex: 1 1 0; height: 40%; border-radius: 6px; background: #B9BCF3"></span>
+</div>
+<div style="padding: 16px 12px 10px; display: flex; flex-direction: column; gap: 6px">
+<h3 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em">Fold and bid</h3>
+<p style="margin: 0; font-size: 17px; color: #2B2E36">MPC turns positions into weights. Buyers see one market-wide histogram, never which team is strong, and bid blind.</p>
+</div>
+</article>
+
+<article style="padding: 8px; border-radius: 18px; background: #E8E7DF; border: 1px solid #DCDBD2">
+<div style="border-radius: 12px; background: #FBFAF6; border: 1px solid #DCDBD2; padding: 14px; display: flex; flex-direction: column; gap: 8px; height: 132px; box-sizing: border-box; justify-content: center">
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; border-radius: 9px; background: #FFB547; font-size: 16px; font-weight: 700"><span>Team Lumen</span><span>Yours</span></div>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 9px; background: #111318; color: #F3F2EC; font-size: 16px; font-weight: 700"><span class="bisik-hatch" style="height: 10px; width: 46%; border-radius: 5px; background: repeating-linear-gradient(90deg, #F3F2EC 0 3px, #3A3D46 3px 6px)"></span><span>Hidden</span></div>
+</div>
+<div style="padding: 16px 12px 10px; display: flex; flex-direction: column; gap: 6px">
+<h3 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em">Pick and decrypt</h3>
+<p style="margin: 0; font-size: 17px; color: #2B2E36">Winner one hides up to three signals. Winner two picks next. Others buy the rest at a flat price.</p>
+</div>
+</article>
+
+<article style="padding: 8px; border-radius: 18px; background: #E8E7DF; border: 1px solid #DCDBD2">
+<div style="border-radius: 12px; background: #2A2FD0; color: #F3F2EC; padding: 16px; display: flex; flex-direction: column; justify-content: center; gap: 6px; height: 132px; box-sizing: border-box">
+<span style="font-size: 15px; font-weight: 600">Claimed by scout ayu</span>
+<span style="font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1">213.58 USDC</span>
+<span style="font-size: 15px; font-weight: 600; color: #FFB547">To a fresh address on devnet</span>
+</div>
+<div style="padding: 16px 12px 10px; display: flex; flex-direction: column; gap: 6px">
+<h3 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em">Report and claim</h3>
+<p style="margin: 0; font-size: 17px; color: #2B2E36">Buyers mark what happened. Scouts claim stake plus payout to any address.</p>
+</div>
+</article>
+</div>
+</section>
+
+<section id="source" class="bisik-in" style="max-width: 1280px; margin: 0 auto; padding: 0 32px 120px; display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+<h2 style="margin: 0; font-size: 52px; line-height: 1.02; font-weight: 700; letter-spacing: -0.035em">Check it yourself.</h2>
+<a href="#source" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border: 1px solid #111318; background: #FBFAF6; border-radius: 12px; font-weight: 700; text-decoration: none">View source</a>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+<sc-for list="{{sources}}" as="s" hint-placeholder-count="3">
+<a href="#source" style="text-decoration: none; color: #111318; border-radius: 18px; background: #FBFAF6; border: 1px solid #DCDBD2; padding: 24px; display: flex; flex-direction: column; gap: 10px">
+<span style="display: flex; justify-content: space-between; align-items: center; gap: 12px"><span style="font-size: 24px; font-weight: 700; letter-spacing: -0.02em">{{s.name}}</span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A2FD0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg></span>
+<span style="font-size: 17px; color: #2B2E36">{{s.what}}</span>
+<span style="align-self: flex-start; padding: 6px 10px; border-radius: 8px; border: 1px solid #2A2FD0; color: #2A2FD0; font-size: 15px; font-weight: 700; overflow-wrap: anywhere">{{s.ref}}</span>
+</a>
+</sc-for>
+</div>
+<div style="border-radius: 18px; background: #E8E7DF; border: 1px solid #DCDBD2; padding: 24px 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 20px">
+<span style="flex: none; padding: 6px 12px; border-radius: 999px; background: #111318; color: #F3F2EC; font-size: 15px; font-weight: 700">Not audited</span>
+<span style="flex: 1 1 520px; min-width: 0; font-size: 18px; font-weight: 500">This is a hackathon build. The operator still sees a GitHub username briefly while verifying it, reads reasons to score them, and decides hoax disputes. Every trust assumption is listed in the README.</span>
+</div>
+</section>
+
+<footer style="border-top: 1px solid #DCDBD2; background: #F3F2EC">
+<div style="max-width: 1280px; margin: 0 auto; padding: 32px; display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; align-items: center; font-size: 16px; color: #2B2E36">
+<span style="font-weight: 800; font-size: 20px; color: #111318; letter-spacing: -0.03em">bisik</span>
+<span>Built for the Colosseum Crypto World’s Fair. Demo data on this page is synthetic.</span>
+<a href="#top" style="font-weight: 600">Back to top</a>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":5300}}'>
+class Component extends DCLogic {
+  rng(seed) {
+    let s = seed;
+    return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+  }
+  value(col, row, rows, rand, phase) {
+    const env = 0.2 + 0.8 * Math.pow(Math.abs(Math.sin(col / 6.1 + phase)), 0.7);
+    const w = rows * 0.05;
+    const f = [
+      rows * (0.18 + 0.05 * Math.sin(col / 11 + phase)),
+      rows * (0.46 + 0.09 * Math.sin(col / 17 + 1 + phase)),
+      rows * (0.74 + 0.05 * Math.sin(col / 9 + 2 + phase))
+    ];
+    let g = 0;
+    for (let i = 0; i < f.length; i++) g += Math.exp(-Math.pow(row - f[i], 2) / (2 * w * w)) * (1 - i * 0.18);
+    return Math.min(1, env * g * 0.85 + rand() * 0.32);
+  }
+  columns(cols, rows, seed, paint) {
+    const rand = this.rng(seed);
+    const phase = (seed % 13) / 3;
+    const out = [];
+    for (let c = 0; c < cols; c++) {
+      const stops = [];
+      for (let r = 0; r < rows; r++) {
+        const v = this.value(c, r, rows, rand, phase);
+        const a = (r / rows * 100).toFixed(2);
+        const b = ((r + 1) / rows * 100).toFixed(2);
+        stops.push(paint(v, c, r) + ' ' + a + '% ' + b + '%');
+      }
+      out.push({ bg: 'linear-gradient(to top, ' + stops.join(', ') + ')' });
+    }
+    return out;
+  }
+  loop(cols) {
+    return cols.concat(cols);
+  }
+  mix(a, b, t) {
+    const pa = [parseInt(a.slice(1, 3), 16), parseInt(a.slice(3, 5), 16), parseInt(a.slice(5, 7), 16)];
+    const pb = [parseInt(b.slice(1, 3), 16), parseInt(b.slice(3, 5), 16), parseInt(b.slice(5, 7), 16)];
+    return 'rgb(' + pa.map((x, i) => Math.round(x + (pb[i] - x) * t)).join(',') + ')';
+  }
+  renderVals() {
+    const rows = 30;
+    const heroCols = 65;
+    const hero = this.loop(this.columns(heroCols, rows, 7, (v, c, r) => {
+      let t = 0.03 + 0.42 * v;
+      if (r > rows * 0.28) t *= 0.4;
+      return this.mix('#2A2FD0', '#E9EAFB', t);
+    }));
+    const heroRevealed = this.loop(this.columns(32, rows, 31, (v) => v > 0.5 ? this.mix('#2A2FD0', '#FFB547', 0.55 + 0.45 * v) : this.mix('#2A2FD0', '#E9EAFB', 0.05)));
+    const flowBg = this.loop(this.columns(90, 16, 71, (v) => this.mix('#111318', '#2A2FD0', 0.05 + 0.6 * v)));
+    const payBg = this.loop(this.columns(40, 10, 43, (v) => this.mix('#2A2FD0', '#1B1F96', 0.2 + 0.8 * v)));
+    const tag = (s) => s === 'yours'
+      ? { tagBg: '#FFB547', tagFg: '#111318', line: '#FFB547', label: 'Yours' }
+      : s === 'public' ? { tagBg: '#FBFAF6', tagFg: '#111318', line: '#111318', label: 'Public' } : { tagBg: '#111318', tagFg: '#F3F2EC', line: '#111318', label: 'Sealed' };
+    const record = [
+      { field: 'Scout', state: 'sealed', w: '62%' },
+      { field: 'Tier group', state: 'public', value: 'Tier 2, seven members' },
+      { field: 'Team backed', state: 'sealed', w: '38%' },
+      { field: 'Stake', state: 'public', value: '100 USDC' },
+      { field: 'Reason', state: 'yours', value: 'Shipped a devnet prototype in week two of the…' },
+      { field: 'Nullifier', state: 'public', value: '0x2c91…e07a' }
+    ].map((r) => ({ ...r, sealed: r.state === 'sealed', open: r.state !== 'sealed', ...tag(r.state) }));
+    const rail = [
+      { stage: 'Open', what: 'scouts stake' },
+      { stage: 'Closed', what: 'folded in MPC' },
+      { stage: 'Auction', what: 'sealed bids' },
+      { stage: 'Allocated', what: 'yours to read' },
+      { stage: 'Settled', what: 'claim anywhere' }
+    ].map((s, i) => ({ ...s, color: i === 3 ? '#FFB547' : '#E9EAFB' }));
+    const ruleIcon = [
+      { iconBg: '#2A2FD0', iconFg: '#F3F2EC' },
+      { iconBg: '#FFB547', iconFg: '#111318' },
+      { iconBg: '#111318', iconFg: '#F3F2EC' }
+    ];
+    const rules = [
+      { title: 'Wrong calls are never slashed', body: 'Only a proven hoax loses its stake, and that stake goes to charity.' },
+      { title: 'Exclusivity has a price floor', body: 'The auction keeps the top three bids and reveals two winners at second price.' },
+      { title: 'Each buyer decrypts alone', body: 'Weights are encrypted to the buyer’s own key, so two buyers never share a view.' },
+      { title: 'Reputation stays encrypted', body: 'Track records are credited inside MPC. Only coarse tiers ever come out.' },
+      { title: 'One stake per slot', body: 'The proof is scoped to the market and slot, so nobody backs one option twice.' }
+    ].map((r, i) => ({ ...r, ...ruleIcon[i % 3] }));
+    return {
+      hero,
+      heroRevealed,
+      flowBg,
+      payBg,
+      record,
+      rail,
+      rules,
+      members: [0, 1, 2, 3, 4, 5, 6].map((i) => ({ delay: (i * 0.6).toFixed(1) + 's' })),
+      stack: [
+        { name: 'Solana', role: 'program and escrow' },
+        { name: 'Arcium', role: 'MPC cluster 456' },
+        { name: 'Reclaim', role: 'zkTLS proofs' },
+        { name: 'Semaphore', role: 'anonymous groups' }
+      ],
+      sources: [
+        { name: 'Solana Explorer', what: 'The program running on devnet.', ref: 'aFNfbxfg…tdp2L7HjvD' },
+        { name: 'bisik-circuits', what: 'Compiled circuits, hash-checked by the Arx nodes.', ref: 'scientivan/bisik-circuits' },
+        { name: 'GitHub', what: 'Program, server and tests. Public at submission.', ref: 'scientivan/Bisik' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

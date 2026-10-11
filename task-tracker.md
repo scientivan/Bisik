@@ -174,7 +174,7 @@ Semua path relatif terhadap folder `Bisik/`.
 ### 3.2 Yang belum ada
 
 - ✅ **Devnet live (A6/H3):** program `aFNfbxfgBuQ6tr5qXDpTmTWrQ8hjLGYNEtdp2L7HjvD` + MXE di cluster Arcium **456**, Arcium **0.15.0**. Circuit di repo publik `scientivan/bisik-circuits` (URL raw dipin ke commit `a86729c`). Seed demo devnet sukses (mint mock USDC `F1uGxYkPfypwni9tfLDSCanFX5dN1nDhPSz7izFEWR37`).
-- ❌ Frontend (fase G), termasuk pembuatan bukti di browser (B4). Dikerjakan terakhir sesuai permintaan Dien.
+- 🟡 Frontend (fase G): desain disetujui Dien pada 11 Okt (`DESIGN.md`, `docs/design-reference/`). SDK sudah bisa jalan di browser (`docs/web-sdk-bundling.md`). Implementasi `apps/web` G1–G12 tersedia. Chrome lulus create → stake ZK → dekripsi MPC → klaim ke alamat baru (market 6, total 27 mock USDC). Penerimaan G2 butuh login GitHub Dien; Safari belum, G10 opt-out belum didukung program. Rincian di `docs/frontend-implementation.md`.
 - ❌ Uji live Reclaim dengan akun GitHub asli (R23). Butuh server di URL publik (I3) atau tunnel.
 - ✅ D4 (`reveal_signals`) dan D6 (reputasi terenkripsi) lulus di localnet **dan di devnet** (market 3). ⚠️ Tabel reputasi devnet berisi 6 entri acak dari insiden kredit posisi lama (lihat Progress Log 20:45).
 - ❌ Video, project di Arena, naskah demo.
@@ -452,8 +452,8 @@ Semuanya ditulis sendiri. Contoh `sealed_bid_auction` hanya rujukan (R21).
 | `GET /v1/groups/:tier/:epoch` | publik | — | `{ root, size, leaves: string[] }` | Untuk bukti Merkle di browser |
 | `POST /v1/options/team-ref` | scout | `{ marketId, teamRef, category }` | `{ teamCommitment }` | `teamRef` (URL repo atau profil) disimpan terenkripsi |
 | `POST /v1/reasons` | scout | `{ marketId, slot, text }` | `{ reasonId, reasonHash, veritas: { D, A, drs, flags[] } }` | Panjang minimal 200 karakter; `reasonHash = keccak(text)`; flag Veritas ditampilkan sebelum stake |
-| `GET /v1/markets` | publik | — | `[MarketSummary]` | Dari indexer |
-| `GET /v1/markets/:id` | publik | — | `{ market, preview?, options: [{index, category}] }` | Tanpa `teamRef` |
+| `GET /v1/markets` | publik | `?status=` opsional | `{ markets: [MarketSummary] }`, urut ID turun | Dibaca langsung dari akun onchain (`program.account.market.all()`), tanpa indexer. MarketSummary: id, kind, status, category, submitEnd, auctionEnd, outcomeEnd, optionCount, positions, minStake, maxStake, minReasonLen, reservePrice, flatPrice, preview |
+| `GET /v1/markets/:id` | publik | — | `{ ...MarketSummary, options: [{index, category, optedIn}], teamRefsRegistered }` | Tanpa `teamRef`. `preview` = histogram satu market `{backed, weak, medium, strong}` (jumlah opsi per tingkat kekuatan), tidak terkait ke opsi tertentu, `null` sebelum status Auction |
 | `GET /v1/markets/:id/signals` | pembeli (SIWS) | — | `{ options: [{ index, teamRef, score, nScouts, tierDist, summary: {pros, cons}, claims: [{id, text, kind}], reasons: [{ filteredText, D, A, flags }] }] }` | Hanya opsi yang diizinkan `Allocation` onchain: rank #k mendapat semua opsi kecuali yang sudah disembunyikan rank sebelumnya; rank 0 mendapat n − b·x |
 | `POST /v1/intro` | pembeli eksklusif | `{ marketId, optionIndex }` | `{ requestId }` | D-15. Scout menerima atau menolak lewat `POST /v1/intro/:id/respond` dengan bukti nullifier; kontak dienkripsi ke kunci pembeli |
 | `POST /v1/outcomes/check` | pembeli / operator | `{ marketId, optionIndex, buyer }` | `{ found, txSig?, evidenceHash }` | Oracle: cari deploy program oleh `deploy_wallet` di Solana dalam jendela, lalu operator mengirim `record_outcome` |
@@ -718,23 +718,26 @@ Format: **ID · judul · prioritas · pemilik · dependensi.** Lalu langkah, dan
 
 ### Fase G: Frontend (`apps/web`)
 
-- [ ] **G1 · Kerangka Vite + React + TS + Tailwind, wallet, routing, tema · P0 · agent · A1**
-- [ ] **G2 · Onboarding scout · P0 · agent · G1, E2, E3, B1**
+- [x] **G1 · Kerangka Vite + React + TS + Tailwind, wallet, routing, tema · P0 · agent · A1**
+- [~] **G2 · Onboarding scout · P0 · agent · G1, E2, E3, B1**
   - **Selesai bila:** akun GitHub Dien → tier tampil → komitmen masuk grup.
-- [ ] **G3 · Daftar dan detail market · P0 · agent · G1, C13**
-- [ ] **G4 · Alur stake · P0 · agent · G3, B4, E4, D1**
+  - UI identitas/backup/Reclaim/polling siap. Uji devnet memakai anggota sintetis lewat demo API; login GitHub Dien belum dilakukan.
+- [x] **G3 · Daftar dan detail market · P0 · agent · G1, C13**
+- [x] **G4 · Alur stake · P0 · agent · G3, B4, E4, D1**
   - Pilih opsi, nominal, alasan dengan flag Veritas langsung, bukti dibuat di browser, kirim transaksi.
   - **Selesai bila:** stake berhasil di localnet/devnet dari UI.
-- [ ] **G5 · Form pembuat market · P0 · agent · G1, C3**
-- [ ] **G6 · Dashboard pembeli · P0 · agent · G3, C7–C9, E5**
-  - Pratinjau, tawaran, hasil lelang, pilih tersembunyi, harga rata, pembaca sinyal.
-- [ ] **G7 · Hasil dan sengketa (pembeli) · P0 · agent · G6, C10, C11, E6**
-- [ ] **G8 · Posisi dan klaim (scout) · P0 · agent · G4, C12**
-- [ ] **G9 · Konsol admin · P1 · agent · G1, E8**
-- [ ] **G10 · Halaman tim (opt-in/out) · P2 · agent · C10**
-- [ ] **G11 · Mode demo · P1 · agent · G5**
+- [x] **G5 · Form pembuat market · P0 · agent · G1, C3**
+- [~] **G6 · Dashboard pembeli · P0 · agent · G3, C7–C9, E5**
+  - Pratinjau, tawaran, hasil lelang, pilih tersembunyi, harga rata, pembaca sinyal tersedia. Chrome market 8: dua tawaran MPC, refund/dekripsi/seleksi pembeli pertama lulus. Keeper mengembalikan bid otomatis; UI kini membaca flag refunded dan menangani balapan. Uji ulang siklus lengkap tertahan RPC publik HTTP 429; penerimaan G6 belum ditandai selesai.
+- [x] **G7 · Hasil dan sengketa (pembeli) · P0 · agent · G6, C10, C11, E6**
+  - Form grant/deploy dan klaim sengketa terhubung ke API serta transaksi onchain. API menolak klaim tersembunyi/posisi lain; respons scout dibuktikan dengan Semaphore. Walkthrough lengkap sengketa dari UI masih bagian H2.
+- [x] **G8 · Posisi dan klaim (scout) · P0 · agent · G4, C12**
+- [x] **G9 · Konsol admin · P1 · agent · G1, E8**
+- [~] **G10 · Halaman tim (opt-in/out) · P2 · agent · C10**
+  - Halaman siap; opt-in lewat operator terhubung ke `registerDeployWallet`. Program belum memiliki instruksi opt-out atau registrasi mandiri tim; UI mengungkapkan batas tersebut.
+- [x] **G11 · Mode demo · P1 · agent · G5**
   - Preset durasi pendek dan banner "DEMO DATA".
-- [ ] **G12 · Pemolesan UI dan aksesibilitas · P1 · agent · G2–G8**
+- [x] **G12 · Pemolesan UI dan aksesibilitas · P1 · agent · G2–G8**
   - Status kosong, loading, dan error; teks jelas; responsif.
 
 ### Fase H: Integrasi dan data demo
@@ -941,8 +944,16 @@ Hanya ditambah, jangan dihapus. Format: `waktu WIB · siapa · apa · bukti/path
 - 2026-10-10 20:45 · agent · **D4 lulus di devnet** (market 2): ecosystem-a mask 111, b mask 110, c mask 100; masing-masing mendekripsi bobotnya sendiri lewat `seed-demo.ts reveal`
 - 2026-10-10 20:45 · agent · ⚠️ Insiden: keeper mengkredit 6 posisi lama (market 0–2, dibuat sebelum perbaikan kunci) sebelum dihentikan. Kredit itu terdekripsi dengan kunci salah → sampai 6 dari 32 slot tabel reputasi devnet berisi entri acak. Tidak bisa direset tanpa instruksi baru + upgrade. Perbaikan: keeper hanya mengkredit market ID ≥ `KEEPER_REP_FROM_MARKET` (=3 di `.env`)
 - 2026-10-10 21:15 · agent · **D4 + D6 LULUS di devnet** (market 3): siklus lelang penuh → 3 pembeli mendekripsi tampilan masing-masing (mask 111/110/100) → settlement → keeper `credit_reputation` 4× (credits 6→10) → `epoch_tiers` mengungkap daftar epoch 2 yang diurutkan di MPC (10 entri: 4 asli + 6 acak dari insiden); ayu/bima/citra/dewa level 2 (naik satu tier), eka tanpa catatan → klaim ayu 213,58 USDC ke alamat baru. Saldo operator 11,72 SOL · `tmp/devnet-d6.log` (lokal)
+- 2026-10-11 · agent · Atas permintaan Dien, pesan outreach direvisi ke v0.2 (`../Ideation-Colosseum/living-doc/d12-outreach-kit.md` bagian 3): pesan pertama satu pertanyaan, framing payout dikoreksi (bukan "hanya kalau tim ship"), follow-up Senin, daftar larangan. Belum ada pesan terkirim (K1–K2 terlambat dari jadwal)
+- 2026-10-11 · agent · Desain frontend disetujui Dien (artifact versi 13, arah Sonogram Bisikan lewat `/impeccable`). Seluruh aturan dan preferensi desain didokumentasikan di `DESIGN.md` (format DESIGN.md, bisa dibaca agent tanpa konteks). Sumber mockup ada di `docs/design-reference/`. `PRODUCT.md` dibuat. Implementasi di `apps/web` belum dimulai (G1)
+- 2026-10-11 · agent · Koreksi pra-frontend (permintaan Dien). (1) SDK: `createRequire`/`node:module` diganti import JSON. Bundle browser (esbuild + polyfill crypto/stream/buffer + shim `packages/sdk/browser/`) lulus smoke test di Chrome: PROGRAM_ID, pdas, newViewKey, encryptStakeSecrets. Resep Vite di `docs/web-sdk-bundling.md`. (2) Server: `GET /v1/markets` (+ `?status=`), detail market kini memuat `options[{index,category,optedIn}]` serta minStake/maxStake/minReasonLen/reservePrice/flatPrice. Tes server 8/8 lulus, dicoba di devnet (market 1–3). (3) Mockup dan DESIGN.md dikoreksi: preview sebelum membeli = histogram satu market (bukan kekuatan per tim), alasan ≥ 200 karakter + penghitung, harga dari devnet. Ditambah bagian "Data truth constraints". (4) README asumsi #6, versi Arcium di tabel repo, serta spec API di tracker diperbarui. Belum: Safari dan transaksi devnet dari browser (G4)
+- 2026-10-11 · agent · Revisi frontend `apps/web` atas review Dien: sonogram diganti aliran paket terenkripsi (`SignalStream`), bar bergaris diganti `Cipher` (gembok + sandi acak), bar tanpa label diganti `StrengthBars`. Halaman app dikecilkan mengikuti veritasprotocol.vercel.app/pools/init. Onboard dan Positions muat satu viewport 1440×900 (Positions jadi tiga kolom). typecheck, 3 tes web, dan vite build lulus. Catatan di `DESIGN.md` bagian "Revision 11 Oct 2026"
+
+- 2026-10-11 · agent · Atas aba-aba Dien, implementasi semua task frontend G1–G12 dimulai. Kerangka Vite/React/TS/Tailwind, token desain, wallet-standard, landing Sonogram, routing, integrasi API dan transaksi stake/buyer/claim/admin ditulis. Menunggu typecheck, build dan verifikasi browser. Alur respons scout diberi bukti kepemilikan yang mengikat isi respons sebelum dihubungkan ke UI · `apps/web`, `apps/server/src/app.ts`
 
 ---
+
+- 2026-10-11 · agent · Browser Chrome devnet market 6 lulus pembuatan market dan callback init MPC, stake dengan bukti Semaphore dari browser, SIWS + reveal_signals + dekripsi lokal, settlement dan klaim ke alamat baru sebesar 27 mock USDC. Group onboarding memakai fixture sintetis demo, bukan bukti GitHub Dien. Build produksi dan typecheck lulus, tes frontend 3/3 dan server 10/10. Safari WebDriver ditolak karena remote automation nonaktif. Desain diperiksa desktop/mobile; reviewer meminta histogram nyata dan amber Operator reads; keduanya sudah dikoreksi dan verdict tindak lanjut ship untuk dua koreksi tersebut · `docs/frontend-implementation.md`, `scripts/frontend-devnet.ts`
 
 ## 16. Cara memperbarui dokumen ini
 
@@ -952,3 +963,7 @@ Hanya ditambah, jangan dihapus. Format: `waktu WIB · siapa · apa · bukti/path
 4. **Kalau spesifikasi (bagian 6) berubah**, perbarui di commit yang sama, lalu catat di Progress Log.
 5. **Keputusan baru dari Dien:** pindahkan dari bagian 14 ke tabel 1.5. Catat juga di Decision Log living doc dan di `../AGENTS.md`.
 6. **Naikkan versi** di header: minor untuk status, mayor untuk perubahan rencana.
+
+- 2026-10-11 · agent · G6 browser market 8: dua tawaran tertutup lulus, refund/dekripsi/seleksi #1 lulus. Ditemukan keeper sudah refund #2 tetapi UI menawarkan refund lagi; diperbaiki dengan status bid.refunded dan recheck setelah race. Percobaan ulang tertahan rate limit RPC 429 (server lokal perlu restart); tidak mengklaim lelang UI lengkap lulus. Konsol sengketa membaca status onchain dan menonaktifkan keputusan ulang. G7 implementasi + pengikat klaim API selesai; H2 walkthrough sengketa lengkap belum. Dokumentasi desain pendamping selesai, dua koreksi reviewer ship, seluruh build/typecheck lulus · `docs/frontend-design-system.md`
+
+- 2026-10-11 · agent · Permintaan Dien: fullscreen hero termasuk header/rail pada perubahan zoom; animasi sesuai panduan; dark mode. Hero memakai 100dvh, rail normal-flow, ukuran fluid dan proportional fit khusus opening pada zoom ekstrem. Tema tersimpan, diterapkan sebelum render, mencakup landing/app/form. Animasi reveal/fill dan feedback 180ms; loop berhenti offscreen/hidden, reduced motion dihormati. Viewport simulasi 25–500% dan mobile lulus tanpa overflow/rail terpotong · `apps/web/src/lib/theme.tsx`, `apps/web/src/lib/motion.ts`, `DESIGN.md`

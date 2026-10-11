@@ -4,7 +4,7 @@
 
 *Bisik* is Indonesian for "whisper". Insiders (hackathon judges, mentors, developers) quietly flag promising teams that have not yet committed to a chain. Ecosystems buy those signals, can bid for exclusivity, and pay the insiders **according to outcomes**: a buyer's payment goes to the scouts behind the teams that shipped on the buyer's chain or won its grant (if the buyer reports none, a default rule picks the strongest signal they bought).
 
-> Status: hackathon build for the Colosseum Crypto World's Fair (Solana track). The on-chain program, MPC circuits, ZK identity, Veritas module, API server and keeper are implemented. The end-to-end test passes on the Arcium localnet, and the program runs on **Solana devnet with Arcium MPC (cluster 456, Arcium 0.15.0)**. The frontend is in progress.
+> Status: hackathon build for the Colosseum Crypto World's Fair (Solana track). The on-chain program, MPC circuits, ZK identity, Veritas module, API server and keeper are implemented. The end-to-end test passes on the Arcium localnet, and the program runs on **Solana devnet with Arcium MPC (cluster 456, Arcium 0.15.0)**. The Sonogram frontend is implemented; Chrome browser create/stake/reveal/claim passes on devnet. Real GitHub onboarding and Safari acceptance remain pending.
 
 | | |
 |---|---|
@@ -39,13 +39,14 @@
 | Path | What |
 |---|---|
 | `contracts/programs/bisik` | Anchor 1.0.2 program: config, groups, markets, escrow, ZK stake/claim, auction, selection, outcomes, disputes, settlement |
-| `contracts/encrypted-ixs` | Arcis circuits (Arcium 0.13.2): `allocate`, `preview`, `place_bid`, `resolve_auction`, `winning_weights`, `position_hits`, and more |
+| `contracts/encrypted-ixs` | Arcis circuits (Arcium 0.15.0): `allocate`, `preview`, `place_bid`, `resolve_auction`, `winning_weights`, `position_hits`, and more |
 | `contracts/tests/e2e.ts` | End-to-end test on the Arcium localnet (real ZK proofs and MPC) |
 | `packages/shared` | Hashing, constants, ZK message and scope encoding |
 | `packages/zk` | Semaphore identities and groups, stake/claim proofs, conversion to the `groth16-solana` layout |
 | `packages/veritas` | Veritas module (Gemini only as the model provider) |
+| `apps/web` | Vite + React Sonogram frontend, Wallet Standard, browser ZK stake/claim, buyer and operator flows |
 | `apps/server` | API: Reclaim verifier, group service, reasons and Veritas, signals, outcome oracle |
-| `services/keeper` | Lifecycle worker (close, preview, resolve, settle) |
+| `services/keeper` | Lifecycle worker (close, preview, resolve, settle, reputation credit) |
 | `scripts/` | Verification-key generation, demo seeding |
 
 ## Run it
@@ -72,6 +73,15 @@ cd services/keeper && npx tsx src/index.ts             # drives markets to settl
 Demo actions: `seed-demo.ts bids <id>`, `select <id> ecosystem-a 0`, `buyflat <id> ecosystem-c`, `claim <id> ayu 1`.
 Hosting the server and keeper: `docs/deploy-railway.md`.
 
+Frontend (`http://127.0.0.1:5173`):
+
+```bash
+pnpm --filter @bisik/web dev
+pnpm --filter @bisik/web build
+```
+
+`/demo` is an explicitly synthetic walkthrough; live routes use the API and onchain accounts. Configuration, Vercel settings, validation and remaining acceptance are in [docs/frontend-implementation.md](docs/frontend-implementation.md).
+
 ## Trust assumptions (v1) and limitations
 
 These are deliberate v1 trade-offs, disclosed rather than hidden:
@@ -81,7 +91,7 @@ These are deliberate v1 trade-offs, disclosed rather than hidden:
 3. **Disputes:** hoax disputes are decided by the operator in v1.
 4. **Outcomes:** Solana deploys are attested by the operator's oracle; grants are attested by the buyer.
 5. **Arcium:** MPC trust rests on the Arcium node operators (devnet cluster 456).
-6. **Signal view:** buyers' per-option scores are assembled by the server from public position weights and the reasons it holds; computing them inside MPC is planned (task D4).
+6. **Signal view:** the API's per-option scores and reasons are assembled by the server from public position weights and the reasons it holds, because the server knows which option each reason backs (see 2). Independently of the server, each buyer can also get MPC-computed weights encrypted to their own x25519 key (`reveal_signals`, live on devnet) and decrypt them client-side.
 7. **Stake amounts** per position are public, because USDC transfers are public. *Which team* a position supports stays encrypted.
 8. Stake-wallet funding is traceable. Shielded funding is planned for v2.
 
