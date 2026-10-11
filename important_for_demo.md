@@ -69,6 +69,44 @@ Di video pitch, sebut angka bersama sumbernya.
 | [Fakta] Base Batches 004 menerima 750+ pendaftar, jadi tim tidak kekurangan | [Inferensi] Bisik tidak menjual "menemukan tim", tapi **penilaian kualitas dari orang dalam sebelum tim berkomitmen**. Masalah ekosistem besar adalah menyaring, bukan menemukan |
 | [Fakta] Metis: "merely suggesting a project to us does not qualify". Pembeli membayar perkenalan | D-15: scout boleh membuka identitasnya **hanya ke pembeli pemenang** untuk memperkenalkan tim |
 
+### 2.1 "Kalau infonya bisa dicari di internet, kenapa harus beli?"
+
+Pertanyaan ini hampir pasti muncul dari juri. Jawabannya wajib ada di pitch, dan sudah tampil di landing (section "Why not just search for it?").
+
+**Jawaban singkat untuk pitch** [Inferensi]: *"Anything you can find online is already priced in. Bisik sells what insiders saw in the room, before it reaches the internet, with money behind each call."*
+
+Yang dibeli pembeli adalah tiga hal, bukan fakta yang bisa di-Google:
+
+1. **Fakta yang tidak pernah dipublikasikan.** Contohnya: kapan tim akan memutuskan chain, tawaran grant dari ekosistem pesaing yang belum ditandatangani, jumlah user beta privat, dan apa yang tim butuhkan untuk berkomitmen. Mentor dan juri mendengar hal-hal ini secara langsung.
+2. **Waktu dan eksklusivitas.** Sinyal paling bernilai sebelum pesaing tahu. Pemenang lelang bisa menyembunyikan sampai tiga sinyal dari semua pembeli lain.
+3. **Penilaian yang dipertaruhkan.** Setiap sinyal didukung stake yang bisa hilang kalau terbukti hoax. Gosip gratis disebar; klaim ber-stake ada harganya. Ini juga inti sinyal di Bench (sebaran modal), bukan isi beritanya.
+
+**Enam jenis sinyal untuk data demo** (semuanya sintetis dan diberi label demo):
+
+| Jenis | Contoh di demo | Kenapa bukan info publik |
+|---|---|---|
+| Waktu keputusan | "Team Lumen picks its chain within 14 days" | Hanya diceritakan ke mentor |
+| Tawaran pesaing | "A rival ecosystem offered Team Nadi a $150k grant, still unsigned" | Negosiasi tertutup |
+| Traksi belum publik | "Team Arka’s private beta reached 3,000 weekly users" | Belum diumumkan |
+| Kebutuhan konkret | "Team Nadi needs an audit and $50k to reach mainnet" | Jarang ditulis publik |
+| Komitmen orang | "Team Lumen’s lead quits his job next month to go full-time" | Info pribadi yang diceritakan langsung |
+| Peringatan | "Judges saw Team Arka’s live demo run on mocked data" | Pengamatan juri di ruang demo |
+
+Sinyal "kualitas tim" yang bisa dicek lewat GitHub atau LinkedIn sengaja **tidak** dipakai sebagai contoh, karena itu informasi publik.
+
+### 2.2 Scout menjual pengamatan dan penilaiannya sendiri, bukan dokumen rahasia tim
+
+**Kalimat wajib di pitch dan sudah tampil di landing:** *"Scouts sell what they saw and what they think, never a team’s private documents."*
+
+- Scout melaporkan **pengamatannya sendiri** (misalnya apa yang dikatakan founder di sesi mentoring) dan **penilaiannya** atas hal itu.
+- Membagikan file, kontrak, atau data room tim **melanggar aturan Bisik**.
+- Tim bisa opt-in dan menerima 5% dari bayaran pembeli.
+
+**Batas yang harus jujur disebut:**
+
+- [Fakta] Aturan "bukan dokumen rahasia" adalah **kebijakan**, bukan sesuatu yang ditegakkan kode. Sengketa onchain di v1 hanya untuk hoax (klaim palsu), dan diputus operator.
+- [Inferensi] Juri bisa bertanya apakah ini sama dengan "menjual rahasia orang lain". Jawabannya: yang dijual adalah pengamatan pribadi orang dalam, tim punya jalur opt-in dan bagi hasil, dan pembeli tidak pernah tahu siapa scout-nya kecuali scout setuju (D-15).
+
 ---
 
 ## 3. Kenapa crypto, dan kenapa ini bukan judi
