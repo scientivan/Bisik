@@ -10,6 +10,8 @@ export interface Chain {
   registerBuyer(authority: PublicKey, pseudonymHash: Uint8Array): Promise<string>;
   currentEpoch(): Promise<number>;
   fetchMarket(id: number): Promise<any | null>;
+  /** Every market account, for the public market list. */
+  fetchMarkets(): Promise<any[]>;
   fetchPositions(marketId: number): Promise<any[]>;
   fetchOption(marketId: number, index: number): Promise<any | null>;
   recordOutcome(marketId: number, buyerIndex: number, option: number, kind: number, evidence: Uint8Array): Promise<string>;
@@ -36,6 +38,7 @@ export function solanaChain(rpcUrl: string, keypairPath: string): Chain {
       send(program.methods.registerBuyer(authority, Array.from(h)).accounts({ operator: operator.publicKey, config: P.config(), buyer: P.buyer(authority) })),
     currentEpoch: async () => ((await program.account.config.fetch(P.config())) as any).currentEpoch as number,
     fetchMarket: async (id) => (await program.account.market.fetchNullable(P.market(id))) as any,
+    fetchMarkets: async () => ((await program.account.market.all()) as any[]).map((a) => a.account),
     fetchPositions: async (id) => {
       const market = P.market(id);
       const all = await program.account.position.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);

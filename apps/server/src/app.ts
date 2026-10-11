@@ -6,7 +6,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { PublicKey } from "@solana/web3.js";
 import { randomUUID } from "node:crypto";
-import { keccak, utf8, toHex, fromHex, be32, Tier, TIER_NAMES, type SignalOption } from "@bisik/shared";
+import { keccak, utf8, toHex, fromHex, be32, Tier, TIER_NAMES, stakeScope, claimMessage, type SignalOption } from "@bisik/shared";
+import { verifyInJs } from "@bisik/zk";
 import { Veritas, sybilHints } from "@bisik/veritas";
 import { visibleMask, STATUS_NAMES, signalRevealToJson } from "@bisik/sdk";
 import type { DB } from "./db.js";
@@ -36,6 +37,23 @@ export function createApp(d: Deps) {
   app.use("*", cors());
   const now = () => Math.floor(Date.now() / 1000);
   const authed = (c: any): string | null => verifyToken(d.cfg.jwtSecret, c.req.header("authorization"));
+
+  // A scout response must prove ownership of its position and bind the exact response.
+  // The nullifier's original market/slot scope is reused, but the message is action-specific.
+  async function ownsResponse(body: any, action: string, id: string, content: string | null, accept: boolean | null = null) {
+    if (!d.chain || !body.proof || !Number.isSafeInteger(body.marketId) || !Number.isInteger(body.slot)) return null;
+    try {
+      const positions = await d.chain.fetchPositions(body.marketId);
+      const p = positions.find((p: any) => toHex(Uint8Array.from(p.nullifier)).toLowerCase() === String(body.nullifier).toLowerCase());
+      if (!p || p.slot !== body.slot) return null;
+      const expected = claimMessage(keccak(utf8(JSON.stringify({ action, id, accept, content }))));
+      const proof = body.proof;
+      if (BigInt(proof.scope) !== stakeScope(BigInt(body.marketId), body.slot) || BigInt(proof.message) !== expected ||
+          toHex(be32(BigInt(proof.nullifier))) !== toHex(Uint8Array.from(p.nullifier)) ||
+          toHex(be32(BigInt(proof.merkleTreeRoot))) !== toHex(Uint8Array.from(p.root)) || !(await verifyInJs(proof))) return null;
+      return p;
+    } catch { return null; }
+  }
 
   app.get("/v1/health", (c) => c.json({ ok: true, version: "0.1.0", veritasModel: d.veritas.modelAvailable, chain: !!d.chain }));
 
@@ -113,7 +131,9 @@ export function createApp(d: Deps) {
 
   app.post("/v1/reasons", async (c) => {
     const { marketId, optionIndex, text } = await c.req.json();
-    if (typeof text !== "string" || text.trim().length < 200) return c.json({ error: "reason must be at least 200 characters" }, 400);
+    const market = d.chain ? await d.chain.fetchMarket(Number(marketId)) : null;
+    const minimum = market?.minReasonLen ?? 200;
+    if (typeof text !== "string" || text.trim().length < minimum) return c.json({ error: `reason must be at least ${minimum} characters` }, 400);
     const reasonHash = toHex(keccak(utf8(text)));
     const corpus = (d.db.prepare("SELECT id, ciphertext, embedding FROM reasons WHERE market_id=?").all(Number(marketId)) as any[]).map((r) => ({
       id: r.id,
@@ -129,24 +149,45 @@ export function createApp(d: Deps) {
   });
 
   // ── markets ──
+  const marketSummary = (m: any) => ({
+    id: Number(m.id),
+    kind: m.kind,
+    status: STATUS_NAMES[m.status],
+    category: m.category,
+    submitEnd: Number(m.submitEnd),
+    auctionEnd: Number(m.auctionEnd),
+    outcomeEnd: Number(m.outcomeEnd),
+    optionCount: m.optionCount,
+    positions: m.positionCount,
+    minStake: Number(m.minStake),
+    maxStake: Number(m.maxStake),
+    minReasonLen: m.minReasonLen,
+    reservePrice: Number(m.reservePrice),
+    flatPrice: Number(m.flatPrice),
+    // Market-wide histogram only: how many options are backed, and how many fall in each strength bucket.
+    // It never says which option is strong, so it is safe to show before purchase.
+    preview: m.status >= 2 ? { backed: m.preview[0], weak: m.preview[1], medium: m.preview[2], strong: m.preview[3] } : null,
+  });
+  app.get("/v1/markets", async (c) => {
+    if (!d.chain) return c.json({ error: "chain not configured" }, 503);
+    const all = await d.chain.fetchMarkets();
+    const status = c.req.query("status");
+    const list = all
+      .map(marketSummary)
+      .filter((m) => !status || m.status === status)
+      .sort((a, b) => b.id - a.id);
+    return c.json({ markets: list });
+  });
   app.get("/v1/markets/:id", async (c) => {
     if (!d.chain) return c.json({ error: "chain not configured" }, 503);
-    const m = await d.chain.fetchMarket(Number(c.req.param("id")));
+    const id = Number(c.req.param("id"));
+    const m = await d.chain.fetchMarket(id);
     if (!m) return c.json({ error: "not found" }, 404);
-    const options = (d.db.prepare("SELECT category FROM team_refs WHERE market_id=?").all(Number(c.req.param("id"))) as any[]).length;
-    return c.json({
-      id: Number(m.id),
-      kind: m.kind,
-      status: STATUS_NAMES[m.status],
-      category: m.category,
-      submitEnd: Number(m.submitEnd),
-      auctionEnd: Number(m.auctionEnd),
-      outcomeEnd: Number(m.outcomeEnd),
-      optionCount: m.optionCount,
-      positions: m.positionCount,
-      preview: m.status >= 2 ? { backed: m.preview[0], weak: m.preview[1], medium: m.preview[2], strong: m.preview[3] } : null,
-      teamRefsRegistered: options,
-    });
+    // Public option list: index and category only. The team behind each option stays private (no teamRef).
+    const entries = await Promise.all(Array.from({ length: m.optionCount }, (_, i) => d.chain!.fetchOption(id, i)));
+    const options = entries.flatMap((o, i) => (o ? [{ index: i, category: o.category, optedIn: !!o.optedIn }] : []));
+    const teamRefsRegistered = (d.db.prepare("SELECT COUNT(*) AS n FROM team_refs WHERE market_id=?").get(id) as any).n;
+    return c.json({ ...marketSummary(m), options, teamRefsRegistered });
   });
 
   // ── buyer auth ──
@@ -225,7 +266,9 @@ export function createApp(d: Deps) {
         nScouts: ps.length,
         tierDist,
         summary: cached ? JSON.parse(cached.json) : undefined,
-        claims: ps.flatMap((x) => JSON.parse(x.r.claims)),
+        claims: ps.flatMap((x) => JSON.parse(x.r.claims).map((claim: any) => ({
+          ...claim, nullifier: toHex(Uint8Array.from(x.p.nullifier)),
+        }))),
         reasons: ps.map((x) => ({ filteredText: x.r.filtered_text, D: x.r.d, A: x.r.a, flags: JSON.parse(x.r.flags) })),
       });
     }
@@ -277,6 +320,11 @@ export function createApp(d: Deps) {
     const m = await d.chain.fetchMarket(Number(marketId));
     const exclusive = m && (m.kind === 0 ? m.creator.toBase58() === who : (m.winners as PublicKey[]).some((w) => w.toBase58() === who));
     if (!exclusive) return c.json({ error: "only exclusive (winning) buyers may request an introduction (D-15)" }, 403);
+    const bi = (m.buyers as PublicKey[]).slice(0, m.buyerCount).findIndex((b) => b.toBase58() === who);
+    if (bi < 0 || !Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= m.optionCount ||
+        !(visibleMask({ optionCount: m.optionCount, kind: m.kind, buyers: m.buyers, winners: m.winners, hidden: m.hidden }, bi) & (1 << optionIndex)))
+      return c.json({ error: "option is outside your allocation" }, 403);
+    if (typeof buyerX25519 !== "string" || !/^(0x)?[0-9a-f]{64}$/i.test(buyerX25519)) return c.json({ error: "32-byte buyer encryption key required" }, 400);
     const id = randomUUID();
     d.db.prepare("INSERT INTO intros (id, market_id, option_index, buyer, buyer_x25519, status, created_at) VALUES (?,?,?,?,?,?,?)").run(id, Number(marketId), Number(optionIndex), who, String(buyerX25519), "REQUESTED", now());
     return c.json({ requestId: id });
@@ -286,7 +334,14 @@ export function createApp(d: Deps) {
   );
   /** Scout answers with contact details encrypted to the buyer's x25519 key (server cannot read them). */
   app.post("/v1/intro/:id/respond", async (c) => {
-    const { accept, contactCiphertext } = await c.req.json();
+    const body = await c.req.json();
+    const { accept, contactCiphertext } = body;
+    const row = d.db.prepare("SELECT * FROM intros WHERE id=?").get(c.req.param("id")) as any;
+    if (!row || row.status !== "REQUESTED") return c.json({ error: "open introduction not found" }, 404);
+    const p = await ownsResponse(body, "intro", row.id, accept ? String(contactCiphertext) : null, !!accept);
+    if (!p || body.marketId !== row.market_id) return c.json({ error: "valid position ownership proof required" }, 403);
+    const reasons = d.db.prepare("SELECT reason_hash FROM reasons WHERE market_id=? AND option_index=?").all(row.market_id, row.option_index) as any[];
+    if (!reasons.some((r) => r.reason_hash === toHex(Uint8Array.from(p.reasonHash)))) return c.json({ error: "position does not back this option" }, 403);
     d.db.prepare("UPDATE intros SET status=?, contact_ciphertext=? WHERE id=?").run(accept ? "ACCEPTED" : "DECLINED", accept ? String(contactCiphertext) : null, c.req.param("id"));
     return c.json({ ok: true });
   });
@@ -306,6 +361,9 @@ export function createApp(d: Deps) {
     const m = await d.chain.fetchMarket(Number(marketId));
     const opt = await d.chain.fetchOption(Number(marketId), Number(optionIndex));
     if (!m || !opt) return c.json({ error: "not found" }, 404);
+    const who = authed(c);
+    if (who !== d.chain.operator.toBase58() && m.buyers[Number(buyerIndex)]?.toBase58() !== who)
+      return c.json({ error: "this buyer allocation belongs to another wallet" }, 403);
     if (!opt.optedIn) return c.json({ found: false, reason: "team has not registered a deploy wallet (opt-in)" });
     const since = Number(m.outcomeEnd) - Number(m.outcomeLen);
     const deploys = await d.chain.findDeploys(opt.deployWallet, since);
@@ -325,12 +383,29 @@ export function createApp(d: Deps) {
       .find((cl: any) => cl.id === claimId);
     if (!claim) return c.json({ error: "unknown claim" }, 404);
     if (claim.kind !== "verifiable") return c.json({ error: "opinions cannot be disputed; only verifiable claims" }, 400);
+    if (!d.chain) return c.json({ error: "chain not configured" }, 503);
+    const market = await d.chain.fetchMarket(Number(marketId));
+    const buyerIndex = market?.buyers.slice(0, market.buyerCount).findIndex((buyer: PublicKey) => buyer.toBase58() === who) ?? -1;
+    if (!market || buyerIndex < 0) return c.json({ error: "no allocation for this buyer" }, 403);
+    if (market.status !== 4) return c.json({ error: "disputes require an open outcome window" }, 409);
+    if (typeof nullifier !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(nullifier) || typeof evidence !== "string" || !evidence.trim())
+      return c.json({ error: "choose a backed claim and provide evidence" }, 400);
+    const position = (await d.chain.fetchPositions(Number(marketId))).find((p: any) => toHex(Uint8Array.from(p.nullifier)).toLowerCase() === nullifier.toLowerCase());
+    const reason = position && (d.db.prepare("SELECT * FROM reasons WHERE market_id=? AND reason_hash=?").all(Number(marketId), toHex(Uint8Array.from(position.reasonHash))) as any[])
+      .find((r) => JSON.parse(r.claims).some((cl: any) => cl.id === claimId));
+    const mask = visibleMask(market, buyerIndex);
+    if (!reason || !(mask & (1 << reason.option_index))) return c.json({ error: "claim must belong to the selected position in your allocation" }, 403);
     const id = randomUUID();
     d.db.prepare("INSERT INTO disputes (id, market_id, nullifier, buyer, claim_id, evidence, status, created_at) VALUES (?,?,?,?,?,?,?,?)").run(id, Number(marketId), String(nullifier), who, claimId, seal(d.cfg.dataKey, String(evidence)), "OPEN", now());
     return c.json({ disputeId: id, claimHash: toHex(keccak(utf8(claim.text))), evidenceHash: toHex(keccak(utf8(String(evidence)))) });
   });
   app.post("/v1/disputes/:id/respond", async (c) => {
-    const { response } = await c.req.json();
+    const body = await c.req.json();
+    const { response } = body;
+    const row = d.db.prepare("SELECT * FROM disputes WHERE id=?").get(c.req.param("id")) as any;
+    if (!row) return c.json({ error: "dispute not found" }, 404);
+    if (row.market_id !== body.marketId || String(row.nullifier).toLowerCase() !== String(body.nullifier).toLowerCase() ||
+        !(await ownsResponse(body, "dispute", row.id, String(response)))) return c.json({ error: "valid position ownership proof required" }, 403);
     d.db.prepare("UPDATE disputes SET response=? WHERE id=?").run(seal(d.cfg.dataKey, String(response)), c.req.param("id"));
     return c.json({ ok: true });
   });
