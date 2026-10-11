@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#2A2FD0" />
+    <meta
+      name="description"
+      content="Private, stake-backed insider signals on Solana. Insiders whisper. Buyers pay to listen."
+    />
+    <title>Bisik · Private signals</title>
+    <link rel="icon" href="/mark.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap"
+    />
+    <script>
+      try {
+        const t = localStorage.getItem("bisik:theme");
+        document.documentElement.dataset.theme =
+          t === "dark" ||
+          (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches)
+            ? "dark"
+            : "light";
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+  </head>
+  <body>
+    <!-- THESIS: Private signals become readable only for their buyer. The mechanism leads.
+OWN-WORLD: Sonogram Bisikan, bone grid, ultramarine fields, amber revealed data, SF Pro, inset framed panels.
+STORY: Understand the mechanism, choose a role, stake anonymously or buy an allocated view.
+FIRST VIEWPORT: Ultramarine sonogram hero, 80px headline at left, reveal line at 74%, lifecycle rail below.
+FORM: Approved landing and two app mockups, seed a44053e7, extended to Phase G in the same system.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
