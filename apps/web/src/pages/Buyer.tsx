@@ -61,9 +61,14 @@ const mockMarket: Market = {
   })),
 };
 const demoReasons = [
-  "Shipped a working devnet prototype in week two. The team maintained a payments SDK with active users and has a public integration checklist. Their next milestone is a reproducible mainnet deployment after the audit.",
-  "Two founders won a hackathon track together. Their repository shows daily commits and a working consumer app. They are comparing ecosystem support before committing to a chain, with public test instructions ready.",
-  "The team has a payments background and a working tooling prototype. It has not committed to a chain yet. Their repository includes a roadmap and a documented benchmark, but the deployment plan is still incomplete.",
+  "I mentored this team during the hackathon. They told me they will pick a chain within 14 days, and two ecosystems have already pitched them. Their lead engineer leaves his job next month to work on this full-time. None of this is public yet.",
+  "In a judging session the founders said a rival ecosystem offered them a $150k grant last week, and they have not signed it. They need an audit and about $50k to reach mainnet next month. Whoever covers the audit first probably wins them.",
+  "During office hours they showed me a private beta with about 3,000 weekly users, which they have not announced anywhere. In the final demo, though, judges found the live numbers ran on mocked data. Verify before you back them.",
+];
+const demoClaims = [
+  "Will choose a chain within 14 days",
+  "Holds an unsigned $150k grant offer from a rival ecosystem",
+  "Private beta with about 3,000 weekly users",
 ];
 export default function Buyer({ demo = false }: { demo?: boolean }) {
   const { id } = useParams(),
@@ -165,7 +170,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
             claims: [
               {
                 id: `demo-${index}`,
-                text: "A public devnet prototype exists.",
+                text: demoClaims[index],
                 kind: "verifiable",
               },
             ],

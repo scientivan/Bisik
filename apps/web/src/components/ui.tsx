@@ -399,14 +399,14 @@ export function StrengthBars({
 }
 /** What a buyer reads after decrypting: plain sentences, so a first-time visitor understands. */
 const REVEALED_LABELS = [
-  "Team Lumen shipped a working prototype in week two",
-  "Team Lumen’s lead maintains an SDK other teams already use",
-  "Team Nadi has committed code every day for six weeks",
-  "Team Nadi is still comparing two ecosystems",
-  "Team Arka reused another team’s idea at a past hackathon",
-  "Team Arka’s demo ran on mocked data",
-  "Three scouts back Team Lumen",
-  "Strongest signal in this market is Team Lumen",
+  "Team Lumen picks its chain within 14 days",
+  "A rival ecosystem offered Team Nadi a $150k grant, still unsigned",
+  "Team Arka’s private beta reached 3,000 weekly users",
+  "Team Nadi needs an audit and $50k to reach mainnet",
+  "Team Lumen’s lead quits his job next month to go full-time",
+  "Judges saw Team Arka’s live demo run on mocked data",
+  "Three scouts staked 450 USDC behind Team Lumen",
+  "Team Nadi’s founders feel ignored by their current chain",
 ];
 /** Sealed packets say what they carry instead of showing raw ciphertext. */
 const SEALED_LABELS: Record<string, string[]> = {

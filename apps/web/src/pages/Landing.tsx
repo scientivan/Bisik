@@ -99,7 +99,7 @@ export default function Landing() {
                 ["Tier group", "Tier 2, seven members", "public"],
                 ["Team backed", "", "sealed"],
                 ["Stake", "100 USDC", "public"],
-                ["Reason", "Shipped a devnet prototype in week two.", "yours"],
+                ["Reason", "Picks a chain within 14 days. Two rivals already pitched them.", "yours"],
                 ["Nullifier", "0x2c91…e07a", "public"],
               ].map(([field, value, state]) => (
                 <div className="list-row" key={field}>
@@ -119,6 +119,63 @@ export default function Landing() {
                 </div>
               ))}
             </Frame>
+          </section>
+          <section className="landing-section" id="why">
+            <div className="section-heading">
+              <h2>Why not just search for it?</h2>
+              <p>
+                Anything you can find online is already priced in. Bisik sells
+                what insiders saw in the room, before it reaches the internet,
+                with money behind each call.
+              </p>
+            </div>
+            <div className="why-grid">
+              <Frame
+                title="Facts that never get posted"
+                body="Decision deadlines, unsigned offers, private user numbers and what a team needs to commit. Mentors and judges hear these in person."
+              >
+                <div className="list-row">
+                  <span>GitHub stars, funding news</span>
+                  <Pill>Public</Pill>
+                </div>
+                <div className="list-row">
+                  <span>“Picks a chain within 14 days”</span>
+                  <Pill state="yours">Insider</Pill>
+                </div>
+              </Frame>
+              <Frame
+                title="You hear it first"
+                body="A signal is worth most before rivals know it. The winning buyer can hide up to three signals from every other buyer."
+              >
+                <div className="list-row">
+                  <span>Rival ecosystems</span>
+                  <Hatch seed={9} reason="The exclusive buyer hid this signal. Other ecosystems cannot open it, so they cannot race you for the team." />
+                </div>
+                <div className="list-row">
+                  <span>You, the winning buyer</span>
+                  <Pill state="yours">Readable</Pill>
+                </div>
+              </Frame>
+              <Frame
+                title="Judgement with money on it"
+                body="Each call carries a refundable stake. Gossip is free to post. A staked call costs the scout if it turns out to be a hoax."
+              >
+                <div className="list-row">
+                  <span>Behind Team Lumen</span>
+                  <strong>3 scouts, 450 USDC</strong>
+                </div>
+                <div className="list-row">
+                  <span>Proven hoax</span>
+                  <strong>Stake goes to charity</strong>
+                </div>
+              </Frame>
+            </div>
+            <Note dark title="Scouts sell what they saw and what they think, never a team’s private documents.">
+              A scout reports their own observation, such as what a founder
+              said in a mentoring session, and their judgement of it. Sharing a
+              team’s files, contracts or data rooms breaks Bisik’s rules, and teams can
+              opt in to take a 5% share of what buyers pay.
+            </Note>
           </section>
           <section className="landing-section" id="parts">
             <div className="section-heading">
@@ -178,8 +235,8 @@ export default function Landing() {
               >
                 <div className="stack">
                   <p>
-                    Shipped a devnet prototype.{" "}
-                    <del>I mentored them last week.</del>
+                    They pick a chain within 14 days.{" "}
+                    <del>I mentored them at Superteam Jakarta.</del>
                   </p>
                   <div className="row">
                     <Pill state="blue">Identifying detail removed</Pill>
