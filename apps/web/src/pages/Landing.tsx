@@ -225,8 +225,8 @@ export default function Landing() {
                   <Hatch seed={3} reason="Each stake reaches MPC encrypted. The nodes add the stakes together without ever seeing which team a single scout picked." />
                 </div>
                 <div className="list-row">
-                  <span>Your weight out</span>
-                  <Pill state="yours">Team Lumen 0.44</Pill>
+                  <span>What you read</span>
+                  <Pill state="yours">Team Lumen holds 44% of staked support</Pill>
                 </div>
               </Frame>
               <Frame

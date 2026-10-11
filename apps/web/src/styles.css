@@ -1857,3 +1857,14 @@ nav a:hover {
     grid-template-columns: 1fr;
   }
 }
+/* Background streams behind copy stay quiet so the text reads first. */
+.flow-hero .stream .packet {
+  background: #171a28;
+  border-color: #1f2335;
+  color: #444aa8;
+}
+.stream.pay .packet {
+  background: #2c31d3;
+  border-color: #3338d6;
+  color: #6266e4;
+}

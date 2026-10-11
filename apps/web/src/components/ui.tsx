@@ -409,11 +409,24 @@ const REVEALED_LABELS = [
   "Team Nadi’s founders feel ignored by their current chain",
 ];
 /** Sealed packets say what they carry instead of showing raw ciphertext. */
+const INSIDER_KINDS = [
+  "Sealed chain decision date",
+  "Sealed rival grant offer",
+  "Sealed private user count",
+  "Sealed funding need",
+  "Sealed founder plan",
+  "Sealed red flag",
+];
 const SEALED_LABELS: Record<string, string[]> = {
-  hero: ["Sealed call", "Sealed reason", "Sealed stake", "Sealed pick"],
-  sealed: ["Sealed call", "Sealed reason", "Sealed pick"],
-  dark: ["Sealed pick", "Sealed reason", "Group proof"],
-  pay: ["Buyer payment", "Scout reward", "Settled"],
+  hero: INSIDER_KINDS,
+  sealed: INSIDER_KINDS,
+  dark: INSIDER_KINDS,
+  pay: [
+    "Ecosystem A paid 2,000 USDC",
+    "Scout reward 640 USDC",
+    "Stake refunded 100 USDC",
+    "Platform fee 300 USDC",
+  ],
 };
 /**
  * Encrypted signal packets streaming right to left. Sealed variants show ciphertext; the
