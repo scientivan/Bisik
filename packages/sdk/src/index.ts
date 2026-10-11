@@ -18,12 +18,12 @@ import {
   deserializeLE,
   x25519,
 } from "@arcium-hq/client";
-import { createRequire } from "node:module";
+import IDL_JSON from "./idl/bisik.json" with { type: "json" };
 
 const anchor: typeof anchorNs = ((anchorNs as any).default ?? anchorNs) as typeof anchorNs;
 export { anchor };
-const require = createRequire(import.meta.url);
-export const IDL = require("./idl/bisik.json");
+// Imported as JSON (no node:module), so the same entry works in Node and in Vite/browsers.
+export const IDL: any = IDL_JSON;
 export const PROGRAM_ID = new PublicKey(IDL.address);
 
 export const Status = { Open: 0, Closed: 1, Auction: 2, Allocated: 3, Outcome: 4, Settling: 5, Settled: 6 } as const;
@@ -40,7 +40,14 @@ export type Circuit = (typeof CIRCUITS)[number] | (typeof CIRCUITS_V2)[number];
 const seed = (s: string) => Buffer.from(s);
 const le = (n: number | bigint, bytes: number) => {
   const b = Buffer.alloc(bytes);
-  if (bytes === 8) b.writeBigUInt64LE(BigInt(n));
+  if (bytes === 8) {
+    // The Buffer shim used by browser crypto dependencies lacks writeBigUInt64LE.
+    // Preserve the unsigned u64 range check and encode the two words explicitly.
+    const value = BigInt(n);
+    if (value < 0n || value >= (1n << 64n)) throw new RangeError("PDA seed exceeds u64");
+    b.writeUInt32LE(Number(value & 0xffffffffn), 0);
+    b.writeUInt32LE(Number(value >> 32n), 4);
+  }
   else if (bytes === 4) b.writeUInt32LE(Number(n));
   else b.writeUInt16LE(Number(n));
   return b;

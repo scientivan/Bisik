@@ -27,6 +27,6 @@ export interface SignalOption {
   nScouts: number;
   tierDist: [number, number, number];
   summary?: { pros: string[]; cons: string[] };
-  claims: (Claim & { id: string })[];
+  claims: (Claim & { id: string; nullifier?: string })[];
   reasons: { filteredText: string; D: number; A: number | null; flags: string[] }[];
 }
