@@ -1,3 +1,4 @@
+import { useDataVersion } from "../lib/live";
 import {
   useState,
   useMemo,
@@ -5,14 +6,15 @@ import {
   useRef,
   type ReactNode,
   type CSSProperties,
+  type ButtonHTMLAttributes,
 } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useParams } from "react-router-dom";
+import { api } from "../lib/api";
 import { useTheme } from "../lib/theme";
 import { useWallet } from "../lib/wallet";
 import { short, remaining } from "../lib/amounts";
 import { useAction } from "../lib/hooks";
-import { network } from "../lib/storage";
-import { RoleTabs } from "./roles";
+import { RolePages, RoleTabs } from "./roles";
 export function Icon({ name = "arrow" }: { name?: string }) {
   const paths: Record<string, ReactNode> = {
     moon: <path d="M20 14a8 8 0 0 1-10-10 8 8 0 1 0 10 10Z" />,
@@ -23,6 +25,7 @@ export function Icon({ name = "arrow" }: { name?: string }) {
       </>
     ),
     arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
+    close: <path d="m6 6 12 12M6 18 18 6" />,
     external: <path d="M7 17 17 7M9 7h8v8" />,
     check: <path d="m5 12 4 4L19 6" />,
     clock: (
@@ -160,13 +163,12 @@ export function Header({ landing = false }: { landing?: boolean }) {
   const wallet = useWallet(),
     action = useAction(),
     { theme, toggle } = useTheme();
-  const [choose, setChoose] = useState(false);
   return (
     <>
       <a className="skip" href="#main">
         Skip to content
       </a>
-      <header className={landing ? "landing-header" : ""}>
+      <header className={landing ? "landing-header" : "app-header"}>
         <div className="header-inner">
           <div className="header-left">
             <Link className="wordmark" to="/" aria-label="Bisik home">
@@ -183,11 +185,16 @@ export function Header({ landing = false }: { landing?: boolean }) {
                   ),
                 )}
               </nav>
-            ) : (
-              <RoleTabs />
-            )}
+            ) : <RolePages />}
           </div>
           <div className="header-actions">
+            {!landing && <RoleTabs />}
+            {!landing && (
+              <nav className="header-links" aria-label="Help and account">
+                <NavLink to="/guide">How it works</NavLink>
+                <NavLink to="/profile">Profile</NavLink>
+              </nav>
+            )}
             <button
               className="theme-toggle"
               onClick={toggle}
@@ -206,48 +213,18 @@ export function Header({ landing = false }: { landing?: boolean }) {
                 onClick={() =>
                   wallet.publicKey
                     ? action.run("Disconnecting wallet", wallet.disconnect)
-                    : setChoose(!choose)
+                    : wallet.requestConnect()
                 }
                 disabled={!!action.busy}
               >
                 {wallet.publicKey
                   ? short(wallet.publicKey.toBase58())
-                  : "Connect wallet"}
+                  : "Connect Wallet"}
               </button>
             )}
           </div>
         </div>
       </header>
-      {choose && !wallet.publicKey && (
-        <div className="container wallet-picker">
-          <Note title={`Connect a wallet on ${network}`}>
-            {wallet.wallets.length ? (
-              wallet.wallets.map((w) => (
-                <button
-                  key={w.name}
-                  className="button"
-                  onClick={() =>
-                    action.run("Connecting wallet", async () => {
-                      await wallet.connect(w);
-                      setChoose(false);
-                    })
-                  }
-                >
-                  {w.name}
-                </button>
-              ))
-            ) : (
-              <p>
-                Open this page in Phantom or install a Solana wallet that
-                supports Wallet Standard.
-              </p>
-            )}
-            <button className="button outline" onClick={() => setChoose(false)}>
-              Cancel
-            </button>
-          </Note>
-        </div>
-      )}
       {(action.error || action.busy) && (
         <div className="container">
           <Feedback action={action} />
@@ -256,7 +233,46 @@ export function Header({ landing = false }: { landing?: boolean }) {
     </>
   );
 }
-export function StatusStrip({ status, end }: { status: string; end?: number }) {
+/** A disconnected action opens the shared picker; it never submits a transaction. */
+export function WalletActionButton({ children, disabled, onClick, type = "button", requiresWallet = true, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { requiresWallet?: boolean }) {
+  const wallet = useWallet();
+  const needsConnection = requiresWallet && !wallet.publicKey;
+  return <button {...props} type={needsConnection ? "button" : type}
+    disabled={needsConnection ? !!wallet.connecting : disabled}
+    onClick={event => {
+      if (needsConnection) {
+        event.preventDefault();
+        wallet.requestConnect();
+      } else onClick?.(event);
+    }}>
+    {needsConnection ? wallet.connecting ? "Connecting…" : "Connect Wallet" : children}
+  </button>;
+}
+/**
+ * Disputes are tracked onchain by a counter on the market (`open_disputes`), not by a lifecycle
+ * state. Pass `openDisputes`, or `marketId`; without either, the route's `:id` is used.
+ */
+function useOpenDisputes(marketId?: number, given?: number) {
+  const params = useParams();
+  const id = marketId ?? (params.id !== undefined && /^\d+$/.test(params.id) ? Number(params.id) : undefined);
+  const [count, setCount] = useState<number | null>(null);
+  const version = useDataVersion();
+  useEffect(() => {
+    if (given !== undefined || id === undefined) return;
+    let live = true;
+    const load = () =>
+      api<{ openOnchain: number | null }>(`/disputes/open/${id}`)
+        .then((r) => live && setCount(r.openOnchain))
+        .catch(() => {});
+    void load();
+    return () => {
+      live = false;
+    };
+  }, [id, given, version]);
+  return given ?? count ?? 0;
+}
+export function StatusStrip({ status, end, marketId, openDisputes }: { status: string; end?: number; marketId?: number; openDisputes?: number }) {
+  const disputes = useOpenDisputes(marketId, openDisputes);
   const stages = [
     "Open",
     "Closed",
@@ -284,7 +300,30 @@ export function StatusStrip({ status, end }: { status: string; end?: number }) {
                     : status}
               {end ? ` closes in ${remaining(end)}` : ""}
             </h3>
-            <p>The keeper advances this market when its window ends.</p>
+            <p>
+              {disputes > 0
+                ? "Settlement waits until the operator resolves every open dispute."
+                : "The keeper advances this market when its window ends."}
+            </p>
+            {disputes > 0 && (
+              <span
+                className="cipher"
+                tabIndex={0}
+                aria-label={`${disputes === 1 ? "Dispute open" : `${disputes} disputes open`}. A buyer flagged a verifiable claim as a possible hoax. This is not a separate market state.`}
+              >
+                <Icon name="clock" />
+                <span aria-hidden="true">
+                  {disputes === 1 ? "Dispute open" : `${disputes} disputes open`}
+                </span>
+                <span className="cipher-tip" role="tooltip">
+                  <strong>Not a separate market state</strong>
+                  A buyer flagged a verifiable claim in one reason as a possible
+                  hoax. The market stays in its current stage, and settlement
+                  waits until the operator decides. A proven hoax sends that
+                  stake to charity. Calls that turn out wrong are never slashed.
+                </span>
+              </span>
+            )}
           </div>
         </div>
         <ol className="lifecycle">

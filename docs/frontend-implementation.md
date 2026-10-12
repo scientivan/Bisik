@@ -41,13 +41,13 @@ Vercel project root must be `apps/web`, build command `pnpm build`, output `dist
 | `/scout/positions` | Saved/recovered positions, fresh-recipient claim, introduction and dispute responses |
 | `/buyer/markets/:id` | Ceiling deposit, sealed bid, sequential selection, flat purchase, refund, encrypted view, outcomes, disputes and introduction requests |
 | `/create` | Fund exclusive market or create operator auction, initialize MPC, short demo windows |
-| `/admin` | Verify buyers, load dispute evidence, onchain ruling, summaries, epoch rotation, team opt-in registration |
-| `/team` | Team policy and route to the actual operator registration; unsupported opt-out disclosed |
+| `/admin` | Verify buyers, load dispute evidence, onchain ruling, summaries, epoch rotation, deploy-wallet registration for outcome evidence (no payment rights) |
+| `/team` | Deferred by Dien, 12 Oct; removed from app routes/navigation |
 | `/demo` | Labelled synthetic sealed/revealed design walkthrough |
 
 Semaphore wasm/zkey are fetched and SHA-256 verified during prebuild, then served from `/artifacts/semaphore/4.13.0`. The proving chunk is loaded only when needed. Claims use the original group-root snapshot, so later group additions do not invalidate a position's ownership proof. Browser backups contain the private identity and original leaves; keep them private.
 
-The operator API receives reasons and the chosen option for Veritas. Public market responses expose index/category/opt-in and only the market-wide histogram. Purchased views include filtered reasons and the backed position for each claim, enabling a buyer to dispute a specific claim. Hidden claims and unrelated positions are rejected by the dispute API.
+The operator API receives reasons and the chosen option for Veritas. Public market responses expose index/category/legacy wallet-registration flag and only the market-wide histogram. Purchased views include filtered reasons and the backed position for each claim, enabling a buyer to dispute a specific claim. Hidden claims and unrelated positions are rejected by the dispute API.
 
 A scout response requires a real Semaphore proof bound to the action, request ID, answer and encrypted contact/evidence content, as well as the position's original root, nullifier and slot. Contact details use x25519 and AES-GCM and are decrypted only on the buyer device. Weights are encrypted by Arcium to the buyer's local key; reasons remain an operator API trust assumption.
 
@@ -77,7 +77,7 @@ Acceptance still requiring external action or program work:
 
 - G2: complete Reclaim with Dien's GitHub account and show its tier/group in UI. No logged-in GitHub session was used by the agent.
 - B4/Safari: Safari WebDriver rejects sessions until “Allow remote automation” is enabled in Safari settings. Chrome is tested; Safari is not.
-- G10: current program has operator-only registration and no opt-out instruction. Full self-service opt-in/out requires a program change and deployment.
+- G10: Team page deferred by Dien on 12 Oct. Teams need no account to be proposed; operator-only wallet registration remains for consented outcome verification. No automatic team payment; devnet upgraded 12 Oct at slot 510110372.
 - Extension wallet approval UX and deployed HTTPS Reclaim callbacks need a manual walkthrough with the user's wallet and hosted server.
 
 No commit, push or deployment was performed during frontend implementation.
@@ -89,3 +89,7 @@ The opening is a flex column including its header and normal-flow lifecycle rail
 Both headers expose an accessible theme toggle. A pre-render initializer selects the stored theme, otherwise the system preference. Theme is persisted under `bisik:theme`; no wallet or identity storage is changed. Semantic surfaces cover dark panels, forms, borders, labels, placeholders, grid and links. Dark sonograms use the deep-ultramarine hero field.
 
 Animation adds hero decrypt entrance, scroll/intersection fill, navigation and button feedback. Offscreen/hidden-tab sonograms pause. Reduced motion removes movement and preserves visible data. Chrome checks covered viewport dimensions corresponding to desktop zoom 25–500%, mobile, dark demo decryption and theme persistence; artifacts are ignored under `apps/web/.review/theme-motion/`.
+
+## Role navigation update · 12 October 2026
+
+App header now separates contextual role tools from the “Use Bisik as” role selector. Every role has an icon and plain purpose subtitle, and operator menus link to actual console sections. Mobile stacks role choice above its tools. Role selection does not change wallet authorization. Design and verification: `app-role-navigation.md`.

@@ -1,108 +1,121 @@
 ---
 name: Bisik
-description: Private, stake-backed insider signals on Solana. Insiders whisper, buyers pay to listen.
+description: Private, stake-backed insider signals in the Butter visual world.
 colors:
-  bone: "#F3F2EC"
-  sheet: "#FBFAF6"
-  frame: "#E8E7DF"
-  rule: "#DCDBD2"
-  rule-soft: "#E6E5DD"
-  grid-line: "#E6E5DC"
-  ink: "#111318"
-  ink-soft: "#2B2E36"
-  hatch-light: "#C9C8BF"
-  ultramarine: "#2A2FD0"
-  ultramarine-deep: "#1B1F96"
-  ultramarine-mid: "#6E72E6"
-  ultramarine-pale: "#B9BCF3"
-  on-ultramarine: "#E9EAFB"
+  bone: "#F7F7F7"
+  sheet: "#FFFFFF"
+  frame: "#EDEDED"
+  ink: "#0F0F0F"
+  ink-soft: "#555555"
+  charcoal: "#1E1E1E"
+  rule: "#D9D9D9"
+  rule-soft: "#E5E5E5"
+  hatch-light: "#A9A9A9"
   amber: "#FFB547"
-  dark-row: "#1E2129"
+  lavender: "#BBA9F5"
+  lavender-panel: "#E4DDFF"
+  dark-bone: "#141414"
+  dark-sheet: "#1E1E1E"
+  dark-frame: "#282828"
+  dark-ink: "#F7F7F7"
+  dark-ink-soft: "#B8B8B8"
+  dark-rule: "#444444"
+  dark-rule-soft: "#343434"
+  dark-hatch-light: "#6B6B6B"
 typography:
   display:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, 'Helvetica Neue', sans-serif"
-    fontSize: "80px"
-    fontWeight: 700
-    lineHeight: 0.98
+    fontFamily: "DieGrotesk, Arial, sans-serif"
+    fontSize: "clamp(54px, 7.47vw, 116px)"
+    fontWeight: 400
+    lineHeight: 1.02
     letterSpacing: "-0.04em"
   headline:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, 'Helvetica Neue', sans-serif"
-    fontSize: "52px"
-    fontWeight: 700
-    lineHeight: 1.02
-    letterSpacing: "-0.035em"
+    fontFamily: "DieGrotesk, Arial, sans-serif"
+    fontSize: "clamp(38px, 4.4vw, 64px)"
+    fontWeight: 400
+    lineHeight: 1.06
+    letterSpacing: "-0.03em"
   title:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, 'Helvetica Neue', sans-serif"
-    fontSize: "24px"
-    fontWeight: 700
-    lineHeight: 1.2
+    fontFamily: "DieGrotesk, Arial, sans-serif"
+    fontSize: "28px"
+    fontWeight: 400
+    lineHeight: 1.15
     letterSpacing: "-0.02em"
   body:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, 'Helvetica Neue', sans-serif"
-    fontSize: "17px"
-    fontWeight: 500
+    fontFamily: "DieGrotesk, Arial, sans-serif"
+    fontSize: "18px"
+    fontWeight: 400
     lineHeight: 1.5
   label:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, 'Helvetica Neue', sans-serif"
-    fontSize: "14px"
-    fontWeight: 700
+    fontFamily: "DieGrotesk, Arial, sans-serif"
+    fontSize: "13px"
+    fontWeight: 400
     lineHeight: 1.3
-  numeral:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, 'Helvetica Neue', sans-serif"
-    fontSize: "76px"
-    fontWeight: 800
-    lineHeight: 0.9
-    letterSpacing: "-0.045em"
-    fontFeature: "'tnum' 1"
+  data:
+    fontFamily: "ABCDiatype, Arial, sans-serif"
+    fontSize: "12px"
+    fontWeight: 400
+  app-title:
+    fontFamily: "DieGrotesk, Arial, sans-serif"
+    fontSize: "30px"
+    fontWeight: 400
+    lineHeight: 1.06
+    letterSpacing: "-0.03em"
 rounded:
-  pill: "999px"
-  frame: "18px"
-  panel: "12px"
-  control: "12px"
-  row: "9px"
+  pill: "8px"
+  control: "16px"
+  control-small: "11px"
+  field: "11px"
+  navigation: "18px"
+  panel: "28px"
+  app-panel: "20px"
+  sheet: "25px"
   bar: "6px"
 spacing:
-  frame-inset: "8px"
-  panel: "18px"
-  card: "24px"
-  section: "120px"
-  gutter: "32px"
+  panel: "32px"
+  card: "30px"
+  app-panel: "22px"
+  grid: "24px"
+  stack: "18px"
+  gutter: "clamp(20px, 4.55vw, 72px)"
+  section: "clamp(90px, 10vw, 160px)"
 components:
   button-primary:
-    backgroundColor: "{colors.ultramarine}"
+    backgroundColor: "{colors.charcoal}"
     textColor: "{colors.bone}"
     rounded: "{rounded.control}"
-    height: "52px"
-    padding: "0 24px"
-  button-on-blue:
+    height: "50px"
+    padding: "0 28px"
+  button-light:
     backgroundColor: "{colors.bone}"
+    textColor: "{colors.charcoal}"
+    rounded: "{rounded.control}"
+    height: "50px"
+    padding: "0 28px"
+  button-outline:
+    backgroundColor: "transparent"
     textColor: "{colors.ink}"
     rounded: "{rounded.control}"
-    height: "52px"
-    padding: "0 24px"
-  button-ink:
-    backgroundColor: "{colors.ink}"
-    textColor: "{colors.bone}"
-    rounded: "{rounded.control}"
-    height: "44px"
-    padding: "0 16px"
-  card-frame:
+    height: "50px"
+    padding: "0 28px"
+  panel:
     backgroundColor: "{colors.frame}"
-    rounded: "{rounded.frame}"
-    padding: "{spacing.frame-inset}"
-  card-panel:
-    backgroundColor: "{colors.sheet}"
+    rounded: "{rounded.panel}"
+    padding: "{spacing.panel}"
+  panel-dark:
+    backgroundColor: "{colors.charcoal}"
+    textColor: "{colors.bone}"
     rounded: "{rounded.panel}"
     padding: "{spacing.panel}"
   pill-sealed:
-    backgroundColor: "{colors.ink}"
+    backgroundColor: "{colors.charcoal}"
     textColor: "{colors.bone}"
     typography: "{typography.label}"
     rounded: "{rounded.pill}"
     padding: "5px 10px"
   pill-yours:
     backgroundColor: "{colors.amber}"
-    textColor: "{colors.ink}"
+    textColor: "{colors.charcoal}"
     typography: "{typography.label}"
     rounded: "{rounded.pill}"
     padding: "5px 10px"
@@ -115,287 +128,183 @@ components:
   input:
     backgroundColor: "{colors.bone}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.control}"
-    height: "52px"
-    padding: "0 16px"
+    rounded: "{rounded.field}"
+    height: "42px"
+    padding: "10px 13px"
 ---
 
 # Design System: Bisik
 
-This file is the single source of truth for Bisik's frontend look, written so that an AI agent with no prior context can build new screens that match. Read it fully before touching `apps/web`.
-
-- **Approved visual reference (live, interactive):** https://claude.ai/artifact/9vRNtrmSEyg12kQ674y6DG (public link). It is a canvas with three artboards: Landing, App · Buyer market, App · Scout stake. Use Play on the market screen to try "Decrypt my view".
-- **Reference source in this repo:** `docs/design-reference/Main.dc.html` (landing), `Market.dc.html` (buyer market screen), `Stake.dc.html` (scout stake screen). These are mockups in a canvas format (`.dc.html`: plain HTML with inline styles, plus a small `renderVals()` class that generates the sonogram columns). Treat their inline styles as the exact values to reproduce in React + Tailwind.
-- **Product context:** `PRODUCT.md` (who the users are, what the mechanism is, what claims are allowed). Trust assumptions are listed in `README.md`.
-- **Owner of taste decisions:** Dien (the founder). Every rule below was either stated by Dien or approved by Dien after review, unless marked *(agent default)*.
-
 ## Overview
 
-**Creative North Star: "The Whisper Sonogram"**
+**Creative North Star: "Butter, carrying Bisik's whispers"**
 
-Bisik sells secrets without revealing who told them. The visual world is a printed sound sonogram: a quiet signal that only resolves into readable bands for the buyer who paid. Encrypted data is shown as faint or hatched bands, data revealed to the current user turns amber, and public data stays plain ink. The page is calm, light, and precise, but alive: signals stream across the screen and sections "decrypt" into view as you scroll.
+Dien's direction of 11 October 2026 replaces the Sonogram/Halyard visual identity with [Butter](https://www.butter.video/) and its [Awwwards reference](https://www.awwwards.com/sites/butter#typography). The world is neutral, spacious and sculptural: a gray-to-white opening, large centered regular grotesk type, two floating navigation islands and smooth black illustration panels. Bisik's own signal streams, encrypted values, support bars, members and explanations remain its content and imagery. Matching this direction does not imply pixel identity with Butter: Bisik has different content, assets and operational screens.
 
-The core message is the **mechanism**, not the use case. Builder sourcing between rival ecosystems is only the first use case. Every surface should help a hackathon judge understand within seconds that insider calls stay sealed while they are staked, aggregated, auctioned and paid.
+The mechanism is the product; builder sourcing is its first example. Visual states make privacy legible without implying that illustration effects enforce encryption. The landing gives explanations room, while the app uses smaller type and denser controls for wallets, proofs, bidding, decryption and claims.
 
-The layout structure follows the Halyard landing and app (https://halyard-bnb.vercel.app/, source https://github.com/wngstnr-code/halyard), which Dien chose as the structural reference. Only the section structure is borrowed. Halyard's content, colors (silver and navy), font (Satoshi), concentric ripple motifs and neumorphic shadows must **not** be copied.
+**Key Characteristics:**
 
-**Key characteristics**
+- Neutral surfaces, regular display type and generous whitespace.
+- Independent floating navigation islands that compact after scrolling.
+- Bisik signal art on overlapping hero sheets and smooth illustration panels with captions below.
+- Amber marks revealed access and returned value; lavender supports the artwork.
+- Explicit sealed, yours and public states, with synthetic examples labelled.
+- The same visual identity in light and dark themes, with practical app density.
 
-- Light bone ground with a clean 32px cell-grid texture.
-- One committed color field (ultramarine) for the hero and key cards; amber only for "revealed to you".
-- Pixel-block sonogram fields (vertical columns of solid color cells) as the signature texture, always moving right to left.
-- Heavy, clean system typography (SF Pro). Nothing thin, nothing monospace.
-- Cards in a frame-plus-inset-panel construction, and each card carries a small piece of real UI.
-- Honest copy: claims match the code, demo data is labelled synthetic.
+This document describes the implemented `apps/web`. Read [PRODUCT.md](PRODUCT.md) for durable product truth and [README.md](README.md) for trust assumptions. The implementation record and reference inspection are in [frontend-butter-redesign.md](docs/frontend-butter-redesign.md). The complete previous design remains intact in [the backup](apps/web-backup/DESIGN.md); old mockups under `docs/design-reference/` are historical, not the current visual authority. Sources are [styles.css](apps/web/src/styles.css), [Landing.tsx](apps/web/src/pages/Landing.tsx), [landing-header.tsx](apps/web/src/components/landing-header.tsx), [ui.tsx](apps/web/src/components/ui.tsx) and [tailwind.config.js](apps/web/tailwind.config.js). CSS overrides determine rendered sizes when they differ from Tailwind's convenience scale. Extension tokens and component previews live in [.impeccable/design.json](.impeccable/design.json).
 
 ## Colors
 
-The palette is restrained: two neutrals, one committed field color, one signal accent. All fills are **solid**. Never use translucent or pastel tint fills (see Do's and Don'ts).
+The dominant identity is pale neutral ground and charcoal, with restrained semantic amber and supporting lavender. Frontmatter values are normative; dark tokens replace the corresponding light CSS variables.
 
-| Token | Hex | Role |
-|---|---|---|
-| `bone` | `#F3F2EC` | Page ground. Also text on ultramarine and ink fields. |
-| `sheet` | `#FBFAF6` | Card inner panels, inputs on frames, light cards. |
-| `frame` | `#E8E7DF` | Outer frame of framed cards, note cards. |
-| `rule` | `#DCDBD2` | 1px borders of cards and panels. |
-| `rule-soft` | `#E6E5DD` | Row dividers inside panels. |
-| `grid-line` | `#E6E5DC` | Lines of the page grid texture. |
-| `ink` | `#111318` | Primary text, "sealed" state, dark cards. |
-| `ink-soft` | `#2B2E36` | Secondary text. Never lighter than this on light backgrounds. |
-| `hatch-light` | `#C9C8BF` | Light stripe of the hatched "sealed" bar. |
-| `ultramarine` | `#2A2FD0` | Committed field color: header, hero, 80% card, primary buttons, active nav state. |
-| `ultramarine-deep` | `#1B1F96` | Hero lifecycle rail, inputs on ultramarine, deep sonogram cells. |
-| `ultramarine-mid` | `#6E72E6` | Secondary chart bars, borders on ultramarine, "Team" pill. |
-| `ultramarine-pale` | `#B9BCF3` | Third chart bar. |
-| `on-ultramarine` | `#E9EAFB` | Nav links and faint sonogram cells on ultramarine. |
-| `amber` | `#FFB547` | **Only** for data revealed to the current user ("Yours"), the reveal line, the revealed sonogram stream, and the "100% stake returns" card. |
+### Primary
 
-State colors are semantic and must stay consistent everywhere:
+- **Charcoal:** primary actions, sealed pills, dark illustration panels and operational bid cards. The historical CSS variable `--blue` and Tailwind `ultramarine` names now map to charcoal; they do not prescribe blue.
+- **Amber:** yours/revealed pills, the revealed stream, unlocked hero sheet, the allocation underline, payout split and stake-return panel. Selection and small lock accents also use amber in the current implementation.
 
-- **Sealed:** ink pill (`ink` background, `bone` text) or the hatched bar.
-- **Yours:** amber pill (`amber` background, `ink` text).
-- **Public:** outlined pill (`sheet` background, 1px `ink` border, `ink` text).
-- An operator-visible value (for example the scout's reason, which the operator's Veritas service reads) uses the amber pill labelled "Operator reads", because honesty about who can see what is part of the product.
+### Secondary
 
-Never use green and red for win/loss or price movement. Bisik must not look like gambling or trading.
+- **Lavender:** the supporting signal stream and pale members/tier details inside black protocol panels. It is supporting art, not an access permission.
+
+### Neutral
+
+- **Bone / Sheet / Frame:** page ground, white app cards and gentle gray landing containers.
+- **Ink / Soft Ink:** primary text and secondary explanations.
+- **Rule / Soft Rule / Hatch Light:** field boundaries, row separators and muted sealed graphics.
+- **Dark counterparts:** charcoal ground, deeper panels, pale text and quieter gray separators. Black illustration fields and semantic amber remain recognizable in both themes.
+
+**The Access State Rule.** State is communicated in words as well as color. Sealed means lock/ciphertext or a sealed label, Yours means authorized readable content, and Public means a plain outlined label. An operator-readable reason must say who reads it; amber alone must never imply only the buyer can read it.
 
 ## Typography
 
-**Font: SF Pro (Apple system font), chosen by Dien.** SF Pro cannot be self-hosted as a web font, so use the system stack and load Inter from Google Fonts as the fallback for non-Apple devices:
+**Display and Body Font:** DieGrotesk (Arial, sans-serif fallback). **Data Font:** ABCDiatype (Arial, sans-serif fallback), currently used for ciphertext rather than every number or address. Both loaded faces have regular weight (400), with `font-synthesis: none`. Headings, body, labels and even `strong` use regular weight; hierarchy comes from scale, spacing and placement.
 
-```css
-font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, 'Helvetica Neue', sans-serif;
-```
+The exact faces are referenced by `@font-face` from Butter's public CDN, with `font-display: swap`:
 
-Rejected fonts (do not use): Schibsted Grotesk, Martian Mono or any monospace, Newsreader, IBM Plex Sans/Mono, Satoshi (Halyard's font).
+- DieGrotesk: `https://marketing.butter.video/_next/static/media/5fb8d156cdd6d753-s.p.woff2`
+- ABCDiatype: `https://marketing.butter.video/_next/static/media/da60608f2183158e-s.p.woff2`
 
-Weights: body text is **500**, labels and small headings are 600 to 700, headings are 700, big numbers are 800. Do not use 300 or 400 anywhere visible; Dien reads thin text as AI-generated.
+Font binaries are not copied into the repository. Exact typography depends on CDN availability. Self-hosting would require licensed font files; preserve the Arial fallback. Old SF Pro, bold-only and pastel/gradient prohibitions are superseded by this direction.
 
-| Role | Size | Weight | Line height | Tracking |
-|---|---|---|---|---|
-| Hero display | 80px | 700 | 0.98 | -0.04em |
-| Section heading (h2) | 52px | 700 | 1.02 | -0.035em |
-| App page title (h1) | 42px | 700 | 1.05 | -0.035em |
-| Big numeral (payout cards) | 76px to 128px | 800 | 0.85 to 0.9 | -0.045em to -0.05em |
-| Card title (h3) | 22px to 24px | 700 | 1.2 | -0.02em |
-| Lead paragraph | 19px to 21px | 500 | 1.45 | 0 |
-| Body / card text | 17px | 500 | 1.5 | 0 |
-| Secondary text | 15px to 16px | 500 to 600 | 1.5 | 0 |
-| Pill / label | 13px to 15px | 700 | 1.3 | 0 |
+### Hierarchy
 
-Rules:
-
-- Numbers use tabular figures (`font-variant-numeric: tabular-nums`).
-- Text inside a card must be large enough to fill it: card titles at least 22px and card body at least 17px. If a card looks empty, enlarge the type or shrink the card; never leave small text floating in a big box.
-- Headings use `text-wrap: balance`.
-- Body measure stays under about 70 characters (`max-width: 70ch` or a px cap).
-- No monospace, even for addresses, hashes or amounts. Use the system font at weight 600 to 700.
+- **Display:** centered hero headline using the frontmatter display role; mobile overrides are described below.
+- **Headline / Title:** regular section and card headings, balanced wrapping and tight tracking. Section explanation text is larger than app copy (21px desktop; 18px mobile).
+- **Body:** readable prose with a general maximum measure of 70ch; the hero lead scales from 18px to 24px, with line-height 1.3 on desktop.
+- **Label / Data:** compact state text and encrypted value text; navigation uses 17px on desktop. Numbers retain tabular figures.
+- **App:** page title is 30px, section heading 22px, body/fields/actions commonly 14px and metadata 12px. At mobile the page title becomes 27px. Large payout numerals are regular and scale independently; the principal percentage reaches 160px on desktop.
 
 ## Layout
 
-**Page structure (landing), in order, modelled on Halyard's section structure:**
+The shared container caps at 1440px with fluid gutters. Landing sections use the fluid section spacing token, centered heading blocks and broad gaps; paired text/illustration sections use a two-column ratio of 1 to 1.15. Protocol parts form two columns. Why, flow and source cards form three columns. Payouts form a four-column composition with a large two-column/two-row main panel.
 
-1. **Header bar** on ultramarine: wordmark on the left, section links (Mechanism, Parts, Payouts, Flow, Source), and an "Open the app" button (bone on ultramarine) on the right.
-2. **Hero**, full-bleed ultramarine with a streaming sonogram behind the copy. The headline, lead paragraph, two buttons and one context sentence sit top-left. A fixed amber reveal line sits at 74% of the width; to its right the sonogram is amber ("decrypted"), with an amber pill "Decrypted for Ecosystem A". A 64px lifecycle rail (`ultramarine-deep`) runs along the bottom with five stages: Open, Closed, Auction, Allocated (amber, "yours to read"), Settled.
-3. **Mechanism** ("Three secrets, kept apart"): text on the left, a framed "Position in market 3" record card on the right, listing each field with its Sealed / Yours / Public state.
-4. **Parts** ("Four parts, one market"): the heading and its paragraph stacked on the left, then a 2x2 grid of framed cards (Reclaim zkTLS, Semaphore groups, Arcium MPC, Veritas). Each card shows a UI fragment of what that part does.
-5. **Not a prediction market**: heading and paragraph on the left, a framed list of five rule rows with colored check icons on the right. Same bone background as the rest of the page.
-6. **Payouts** ("Who gets paid, and when"): centered heading, then a 4-column bento: the 80% scouts card (2x2, ultramarine, with a split bar and a streaming pixel field), the 15% Platform and 5% Team cards, the amber 100% stake-returns card, a full-width ink card "Buyer payments are not refunded…", and a full-width "Built on" row of chips.
-7. **Flow** ("One market, start to finish"): a wide ink card "Stake in the dark" over a streaming pixel-block field, with a "Try the stake flow" button, then three framed cards (Fold and bid, Pick and decrypt, Report and claim), each with a UI fragment.
-8. **Source** ("Check it yourself"): three link cards (Solana Explorer, bisik-circuits, GitHub) and a "Not audited" note card.
-9. **Footer**: wordmark, one line noting the demo data is synthetic, and a back-to-top link.
+The opening has a minimum height of 100svh, a light gradient from `#d7d7d7` through `#ebebeb` to the page ground, and centered overlapping signal sheets above the copy. Dark mode uses `#303030` through the dark sheet to the dark ground. The lifecycle rail is normal flow and wraps. Content may extend beyond a short viewport; do not reintroduce absolute bottom positioning or assume the previous fullscreen fitting behavior still applies.
 
-**App screens** follow Halyard's app structure: the same header pattern on a bone background (nav items are 10px-radius tabs, and the active tab has a `frame` fill), a page title, a framed status strip, then a two-column body. The main column (`flex: 999 1 600px`) sits next to a side column (`flex: 1 1 340px`), and the side column wraps under the main one on narrow screens.
+Preserve the implemented landing order: hero → mechanism → why insider signals matter → four parts → not a prediction market → payouts → flow → source → footer invitation and metadata. Preserve the original Bisik explanations and illustration assets. Butter's visual direction does not authorize replacing them with Butter's customer content or artwork.
 
-- **Buyer market:** a status strip with a clock icon, "Auction closes in 4 min 12 s", and a segmented lifecycle control (the current stage is ultramarine). Before the buyer decrypts, the signals panel shows a market-wide histogram ("Three options backed. Two strong, none medium, one weak.") and one row per option titled only "Option N, <category>". Each row has a "Team sealed" pill, a sonogram strip of uniform grey noise, and a sealed reason. After "Decrypt my view", the rows show team names, weights, the full reason (200 or more characters) and its pills. The side column has the sealed-bid card (ultramarine) and an "Or skip the auction" flat-price card. Prices use the real devnet market values (reserve 100 USDC, flat 90 USDC).
-- **Scout stake:** team picker (three toggle buttons), reason textarea with a character counter ("215 / 200", because the API rejects reasons under the market's `minReasonLen`, 200 on devnet) and Veritas result pills, stake input plus "Seal and stake on <team>" button. The side column is an ink card "What leaves your device", listing each field with its state pill.
+App screens keep role tabs, a compact page title/status strip and wrapping main/side columns with bases of 600px and 280px. They use white bordered containers instead of applying landing display scale to forms. Market tables become stacked records on narrow screens; create forms and wallet controls wrap to remain usable.
 
-**Grid and spacing**
+### Responsive boundaries
 
-- Container `max-width: 1280px`, side padding 32px (16px on phones).
-- Section vertical padding is 100px to 120px. Spacing above a heading is larger than below it.
-- Card gaps are 14px to 16px. Frame inset is 8px. Inner panel padding is 18px to 24px.
-- Pages are fluid. Rows `flex-wrap: wrap`. At phone width, columns stack, nav wraps, and wide tables scroll inside their own box.
+- **1600px and above:** more top breathing room and a taller hero art area.
+- **1100px and below:** navigation tightens; position/admin columns stack; five-field forms reduce to three columns.
+- **800px and below:** inline section links disappear; the menu remains. Paired sections, why/flow/source/market grids, market records and form grids stack. Hero display uses `clamp(50px, 8vw, 64px)`.
+- **560px and below:** 20px content gutters, tighter floating header with 16px outer margins, resized signal sheets, single-column protocol parts and a two-column payout grid. Hero display uses `clamp(38px, 10.8vw, 59px)` with line-height 1.04. App panels tighten to 18px padding and team choices stack.
+- **360px and below:** hero sheet positioning and navigation spacing tighten further.
 
-**Page texture.** The page background is bone with a 32px cell grid in `grid-line`:
-
-```css
-.bisik-grid {
-  background-color: #F3F2EC;
-  background-image: linear-gradient(#E6E5DC 1px, transparent 1px),
-                    linear-gradient(90deg, #E6E5DC 1px, transparent 1px);
-  background-size: 32px 32px;
-  background-position: -1px -1px;
-}
-```
-
-Every section sits on this same texture. Do not create a lone section with a different full-width background (Dien rejected a black full-width section because it "stood out alone"). Dark or ultramarine color belongs inside cards and the hero, not as random full-bleed bands.
+Browser evidence is local at `apps/web/.review/butter/`, including desktop/mobile, dark, demo and create views. This evidence documents visual review at the recorded viewports; it is not evidence of every native browser zoom level or a rerun of live transactions.
 
 ## Elevation & Depth
 
-Mostly flat, with layering instead of heavy shadows:
-
-- Depth comes from the **frame plus inset panel** construction (a `frame` outer shell 8px around a `sheet` panel), plus 1px `rule` borders.
-- Framed cards may carry one soft offset shadow: `0 1px 2px rgba(17,19,24,0.06), 0 18px 40px -24px rgba(17,19,24,0.35)`. Shadows always have an offset and blur. No colored glows, no hard offset (neobrutalist) shadows, no neumorphic rings.
-- No glassmorphism, no backdrop blur.
+Most depth comes from tonal surfaces and overlapping artwork. Broad rounded panels are flat; app boundaries use light strokes. There is no page grid or old frame-with-inset-panel construction. Shadows are localized: the tilted hero sheets use `0 22px 35px -20px #0009`, the expanded menu uses `0 20px 40px -20px #0004`, and the encrypted explanation tooltip uses `0 12px 28px -12px #0008`.
 
 ## Shapes
 
-- Outer card frames: 18px radius. Inner panels and controls: 12px. List rows inside panels: 9px to 12px. Bars: 6px. Pills: fully round (999px).
-- Borders are 1px. No thick colored left or right border stripes on cards.
-- **The sonogram cell** is the signature shape: tall columns split into stacked solid color cells (a "pixel-block" field), with 2px gaps between columns. It is used in the hero, the 80% payout card, the "Stake in the dark" card and the market signal strips.
-- **The hatched bar** (`repeating-linear-gradient(90deg, #111318 0 3px, #C9C8BF 3px 6px)`, rounded ends) means "sealed value". On dark backgrounds use bone and `#3A3D46` stripes.
-- Icons are inline stroke SVGs (stroke width 2.2 to 2.6, round caps), drawn consistently. Never emoji. Never Unicode arrows in copy.
-- Wordmark: lowercase "bisik" in weight 800, tracking -0.03em, next to a four-bar mark (bars of height 6, 16, 10 and 4 units, with the third bar in amber on blue or ultramarine on light).
+Smooth, large corners frame illustration panels; smaller rounded rectangles hold controls, fields and status labels. The landing panel radius is the frontmatter panel token; mobile reduces it to 23px. App panels use the app-panel token, buttons reduce to 12px, and state pills are small rounded rectangles rather than capsules. Hero sheets use the sheet token on desktop and 20px on mobile. Captions sit beneath the illustration panel, without an extra enclosing frame.
 
 ## Components
 
-**Framed card (the default card).** Build it from an outer `frame` shell (18px radius, 8px padding, 1px `rule` border) holding an inner `sheet` panel (12px radius, 1px `rule` border, 18px padding). The inner panel holds a **real UI fragment** (a verified-record row, a group of member dots, encrypted bars merging into a weight, a reason with an identifying detail struck out, a mini histogram, a list row marked Yours or Hidden, a claimed amount). Below the panel come the title (22px to 24px, 700) and one or two lines of body (17px, 500). This pattern comes from 21st.dev card components (https://21st.dev/community/components/s/card and /s/bento), which Dien gave as the reference for clean, non-generic cards. A card made only of an icon, a title and a paragraph is not acceptable.
+### Buttons and fields
 
-**Stat card (payout bento).** A big numeral (76px to 128px, 800) top-left, a pill label top-right, and a 20px weight-600 sentence at the bottom. The card's content must fill it. The 80% card is ultramarine, with an 80/15/5 split bar (amber, bone, ultramarine-mid) and a slowly streaming pixel field in its lower half.
+Primary buttons are charcoal with pale text; dark mode reverses ordinary primary buttons to pale with charcoal text. Light buttons sit on black panels; outline buttons retain a neutral stroke. Hover changes the fill, active buttons scale to 0.97, and disabled buttons use muted frame/soft-ink colors. Landing controls use the frontmatter dimensions; app buttons are 42px minimum height with 18px horizontal padding and smaller type. Fields have a neutral stroke, page-ground fill and their own visible labels; textarea remains vertically resizable.
 
-**Note card.** For a caveat or disclaimer, never a floating paragraph. Use a full-width card (ink or `frame`) with an icon tile or a pill, a bold first line, and the explanation underneath.
+Global keyboard focus uses a two-pixel theme accent outline with a five-pixel offset. Keep the skip link, meaningful field labels, wallet feedback and busy/disabled states. Action feedback is an atomic polite live region.
 
-**Pills.** Fully round, 13px to 15px, weight 700. Sealed is ink, Yours is amber, Public is outlined, Platform is ink, Team is ultramarine-mid.
+### Navigation
 
-**Buttons.** 44px to 52px tall, 12px radius, weight 700. The primary is ultramarine; on ultramarine backgrounds it becomes bone with ink text. The secondary is outlined ink or a `#3B40DA` fill with a `#6E72E6` border on ultramarine. A disabled button has a bone fill, a `rule` border, `#6B6E78` text and a not-allowed cursor, and its label says when it unlocks ("After allocation").
+The landing has two independent floating islands: the wordmark/section menu on the left and theme/app controls on the right. They sit 24px from the top on desktop and compact once scroll exceeds 100px. Hidden compact links are also hidden from keyboard navigation. The expanded menu keeps section links and a buyer demo entry; Escape closes it and returns focus to the toggle. Follow native button keyboard activation and preserve `aria-expanded`/`aria-controls`. The operational app uses its existing role navigation and wallet header.
 
-**Inputs.** 48px to 52px tall, 12px radius, bone fill, 1px `rule` border, 17px to 19px text at weight 600 to 700. On ultramarine, use a `ultramarine-deep` fill with a `#6E72E6` border. Every input has a visible `<label>`.
+### Panels, pills and sealed values
 
-**Toggle buttons (team picker).** 14px radius. When selected: ultramarine fill, bone text, 2px ultramarine border, `aria-pressed="true"`.
+Landing illustration panels carry captions underneath; protocol parts use black backgrounds with lavender support details. App cards are bordered neutral surfaces with compact inner padding. Notes carry explanatory copy and trust assumptions. Public pills are outlined, sealed pills are charcoal, and yours pills are amber; inside dark cards, inverted sealed pills and darker public pills preserve readability.
 
-**Status strip (app).** A framed card holding a 52px ultramarine icon tile (clock), a 24px status line, a supporting line, and a segmented lifecycle control (a bone track with 9px-radius segments, where the current stage is ultramarine).
+Ciphertext is a focusable lock/value treatment with an accessible explanation. Its tooltip appears on hover or keyboard focus, is right-aligned and caps width at the smaller of 260px and 75vw. Explain why each particular value is locked rather than showing meaningless decorative secrecy. Use market-wide strength bars/counts before allocation; never map a preview strength to a sealed option.
 
-**Focus and selection.** Focus ring: `outline: 2px solid #2A2FD0; outline-offset: 2px to 3px; border-radius: 8px`. Text selection: amber background with ink text.
+### Signal artwork and motion
 
-### Motion
+The hero adapts existing Bisik signal streams into three tilted overlapping sheets. Its front sheet is a native button labelled as a synthetic demo; click, Enter or Space toggles sealed/revealed state, updates `aria-pressed` and announces its caption politely. This local demonstration does not submit a transaction or grant access to live signals. The actual buyer decryption flow remains separate.
 
-Motion is part of the identity. Dien explicitly asked for it. Every animation must be disabled under `prefers-reduced-motion: reduce`.
-
-| Animation | Where | Spec |
-|---|---|---|
-| **Signal stream** (focal) | Hero sonogram, payout 80% card, "Stake in the dark" card, market signal strips | Render the columns twice in a track that is 200% wide, then `translateX(0 → -50%)`, linear, infinite. Speeds: hero 48s, revealed amber stream 22s, background fields 90s, market strips 14s to 31s (each team a different speed). Direction is always right to left: signals arrive and get captured. |
-| **Decrypt reveal** | Each landing section on scroll, the revealed reasons in the market screen, the hero's amber region on load | `clip-path: inset(0 100% 0 0) → inset(0 0 0 0)`, ease `cubic-bezier(.16,1,.3,1)`. Scroll-linked with `animation-timeline: view(); animation-range: entry 0% cover 28%` inside `@supports (animation-timeline: view())`, so browsers without support (Safari) simply show the content. |
-| **Marching hatch** | Every sealed bar | Animate `background-position` from 0 to 24px, 1.2s to 2.2s, linear, infinite. |
-| **Member pulse** | Semaphore card dots | Scale 1 → 1.12 and ultramarine → ink, 4.2s cycle, staggered 0.6s per dot, so no single member stands out for long. |
-| **Grow / fill** | Histogram bars, the 80/15/5 split bar | Scroll-linked `scaleY` / `scaleX` from near zero. |
-
-Never animate everything identically. No generic fade-and-rise on every section, no hover lift, no parallax.
+Streams move right to left and pause when offscreen or the document is hidden. Ciphertext changes every 160ms when reduced motion is off. Section headings move into place once on entry; percentage/histogram fills use the existing entry animation. Authorized content reveals with the existing 0.7s clipped animation. Sheet hover uses the existing 0.6s easing, and control/menu/tooltip state changes use short transitions. Keep layout dimensions stable through interactions. Under reduced motion, animations/transitions are disabled, smooth scrolling becomes immediate and ciphertext remains static; content and interaction remain available.
 
 ## Do's and Don'ts
 
-These rules come from Dien's review rounds on 11 Oct 2026. Breaking them is the fastest way to get the work rejected.
+### Do:
 
-### Do
+- **Do** follow Butter's neutral palette, regular type, generous spacing, floating islands and smooth illustration panels.
+- **Do** preserve Bisik's assets, explanation content, section order, saved theme preference and app routes/flows.
+- **Do** distinguish sealed, yours and public states with explicit labels and accessible explanations.
+- **Do** label synthetic/demo content and show operator visibility and funding traceability honestly.
+- **Do** keep app typography compact and controls usable at narrow widths and keyboard focus.
+- **Do** retain exact payment truth: buyer payments are not refunded; wrong calls alone are not slashed; proven hoax stakes go to charity.
 
-- Make the mechanism the hero of every surface; the builder-sourcing use case is just an example.
-- Fill every card with a real UI fragment, sized so the card has no large empty area.
-- Use solid colors and pixel-block sonogram fields for color surfaces.
-- Keep the whole page on the bone cell-grid texture.
-- Put context for a heading **below** the heading, as a normal sentence.
-- Put caveats, disclaimers and footnotes **inside a card** (note card), or directly under the heading they belong to.
-- Use heavy, readable type (500 and up) at generous sizes.
-- Write honest copy: say who pays whom, say what the operator can see, label demo data as synthetic, and say "Not audited".
-- Add motion with meaning (signals streaming right to left, sections decrypting into view), and respect reduced motion.
+### Don't:
 
-### Don't
+- **Don't** revive the previous Sonogram/Halyard typography, ultramarine page fields, grid texture or inset-frame identity as current requirements.
+- **Don't** import Butter logos, illustrations, testimonials or invented customer/partner claims.
+- **Don't** imply a decorative reveal is live decryption, or show a sealed team, per-option support or unallocated reason before authorization.
+- **Don't** call buyer rewards payment only when a team ships; the default pool can go to the strongest purchased signal when no option succeeds.
+- **Don't** present the private-document prohibition or team self-registration as enforced features; the former is policy and the latter remains unsupported.
+- **Don't** use gambling/trading language, price charts or red/green win-loss coloring.
+- **Don't** claim the verifier never sees identity or reasons: it sees the GitHub username briefly, reads reasons for scoring and decides hoax disputes.
 
-- **No thin or light fonts, and no monospace** (the small monospace labels were the clearest "AI-generated" signal for Dien).
-- **No eyebrow labels**: never place a pill, kicker or small label directly above a heading (for example a "Market 3, builder sourcing" pill above the page title, or an "Allocated" pill above a card title).
-- **No colon used to explain the previous phrase** in UI copy ("First use case: ecosystems…" must become "The first use case is ecosystems…"). **No em dash** anywhere in copy. No Unicode arrows ("→") in copy either.
-- **No floating paragraphs**: a lone paragraph sitting to the right of a heading, or under a grid with nothing around it, looks abstract and unplaced.
-- **No small text in a big card.**
-- **No generic grid cards** (bordered boxes with a small label, a title and a paragraph). They look AI-made.
-- **No translucent or pastel tint fills** (for example a pale amber row background, or a transparent gradient wash). Use the solid color instead.
-- **No full-width section with its own different background** that breaks the page rhythm.
-- No green/red, no price charts, no betting language. Bisik is not a prediction market.
-- No cream "confidential dossier" look (serif type, red stamp, redaction bars on cream). That direction was tried first and rejected as unclean and AI-looking.
-- No Halyard clothes: no silver/navy palette, no Satoshi, no concentric ripples, no neumorphic shadows.
-- No invented features or claims. If a capability does not exist in the code, do not show it as a working control. Use a disabled state that says when it unlocks.
 
-## Revision 11 Oct 2026 (implemented in `apps/web`): signal visuals and compact app sizing
+## Market list clarity · 11 October 2026
 
-This revision overrides any earlier text in this file that conflicts with it.
+Dien removed the role-description/page-link bar below the app header. Buyer and scout listings use plain explanations: round ID and category are reference metadata; proposed teams are possible answers to the question; staked calls are submissions, not a count of unique scouts. Total deposits and market-wide support buckets are separate. Synthetic demo rounds have distinct illustrative questions labelled Demo question; the server metadata and onchain questions are unchanged. The scout column is Stake per call, with a prominent min–max USDC range and a separate refundable-after-settlement note that explains the proven-hoax exception. Buyer pricing separates the minimum exclusive bid from shared access.
 
-- **Signal stream replaces the sonogram.** Dien said the old pixel-column sonogram looked like music notation. Signals are now drawn as **encrypted packets**: small rounded chips (7px radius, 12px weight-700 text) in lanes that move right to left at slightly different speeds. Sealed packets show short random hex. Packets past the amber reveal line are amber with readable labels such as "Team Lumen 0.44" or "Tier 2". Variants are hero (quiet, so the headline stays readable), revealed, sealed (grey, used in market strips), dark and pay. The component is `SignalStream` in `apps/web/src/components/ui.tsx`, also exported as `Sonogram`.
-- **Cipher replaces the hatched bar.** Dien did not understand what the striped bar meant. A sealed value is now a small ink chip with an amber lock and ciphertext that keeps re-scrambling (`Cipher`, exported as `Hatch`). It stops moving under reduced motion.
-- **Labelled histogram replaces the unlabelled bars.** Strength is shown as `StrengthBars`: rows for Strong, Medium and Weak with a bar and a count. It is used in the landing "Fold and bid" card and in the buyer pre-purchase preview. The Arcium card now shows "Stakes in" as a cipher and "Your weight out" as an amber pill.
-- **App pages are compact.** The landing keeps its large scale. Pages inside the app (`.page`) follow https://veritasprotocol.vercel.app/pools/init:
-  - page title 24px;
-  - card titles 15–17px;
-  - body and labels 13–14px;
-  - inputs and buttons 38px tall with 14px text and a 10px radius;
-  - panel padding 16px;
-  - gaps 12–14px.
-  The rules are at the end of `apps/web/src/styles.css`. The earlier rule "card text at least 17px" now applies to the landing only.
-- **One viewport.** `/scout/onboard` and `/scout/positions` must fit in one viewport at 100% zoom (checked at 1440×900). Positions uses three columns: tools on the left, records in the middle (scrolling inside its own column), help on the right.
+## Wallet actions · 11 October 2026
 
-### Follow-up, same day
+Disconnected wallet-required actions use the label **Connect Wallet** and open one shared modal picker. Connected actions retain their original labels and validation. Connection never automatically signs or submits. Show wallet-specific retry guidance after rejection, devnet context, waiting state and separate-approval explanation. The modal supports Escape, trapped keyboard focus, focus restoration and mobile scrolling. Local actions and synthetic walkthrough actions do not require connection. Details: `docs/wallet-connection.md`.
 
-- **Revealed packets are sentences.** They read like "Team Arka reused another team’s idea at a past hackathon", not "Team Arka 0.18" or "DRS 0.12". A first-time visitor must understand each label without context. The hero pill says "(demo)" because these are synthetic.
-- **Sealed packets name what they carry.** They read "Sealed call", "Sealed reason", "Sealed stake" or "Buyer payment", each with a lock icon. Raw hex is no longer shown in packets.
-- **Every sealed value explains itself.** Hover or keyboard focus on a `Cipher` opens a "Why is this locked?" pop-up with a reason specific to that attribute (`reason` prop).
-- **One viewport.** `/create` (fields share rows in 2, 3 and 5 column grids) and `/admin` (three columns) now fit one 1440×900 viewport, alongside `/scout/onboard` and `/scout/positions`.
+## Team participation · 12 October 2026
 
-### Role-based app shell (11 Oct, after an impeccable critique)
+Dien deferred the Team page and removed its automatic payment share. App navigation has Buyer, Scout and Operator. Payout artwork shows 85% scouts and 15% platform. Teams need no account to be proposed; consent and deploy-wallet ownership are requested when introductions or deployment evidence are needed. The revised onchain rule is active after the devnet upgrade on 12 October (slot 510110372).
 
-- **Pages are grouped by role.** The header holds a role switcher: Buyer, Scout, Team, Operator. Under it, a role bar states who the role is, what it does, and lists that role's pages. Buyer: Markets to buy, Walkthrough with demo data, Open a market. Scout: Get verified, Markets to back (`/scout`), My positions and claims. The definitions live in `apps/web/src/components/roles.tsx`.
-- **Every app page opens with an ultramarine banner** (one sentence of purpose plus up to three real stats, following app.reckonz.xyz/receipts). A numbered step strip shows where the page sits in its role's flow.
-- **Markets is a compact table, not a card wall.** Columns are the buyer's question, stage, backing so far (calls, USDC staked, measured spread) and price. One action per row matches the stage. Stage filters are chips.
-- **Market questions are shown.** Only the hash is onchain, so the server stores question text and accepts it only when keccak(text) matches `question_hash` (`POST /v1/markets/:id/question`; Create publishes it automatically).
-- **The spread is measured, never vague.** "Near the top" means at least 50% of the leading option's weighted stake, "middle" 20–50%, "trailing" under 20% (from the `preview` circuit). Do not use strong/medium/weak without these definitions.
-- **Pitfall:** Tailwind's `outline` utility collides with the `.button.outline` class and adds a 3px ring. `.button.outline:not(:focus-visible) { outline: none }` fixes it; do not rename back.
+## Role workspaces · 12 October 2026
 
-## Working with Dien on design
+Dien requested contextual navigation using three reference screenshots. The app header now has a left-side menu of actions and a right-side grouped selector labelled “Use Bisik as”. Each role shows an icon, role name and purpose: Buyer / Buy signals, Scout / Sell insights, Operator / Manage Bisik. Role choice uses a filled state; the current action uses an underline. On screens under 1000px the role selector precedes the purpose and action menu. Keep 44px minimum targets, wrap menus at narrow widths, and use native link semantics with separate active role/page announcements. Role selection changes the workspace route, never wallet permissions. This replaces the earlier bare role tabs while keeping the removed standalone role bar absent.
 
-- Reply to Dien in Indonesian. Keep explanations short and concrete.
-- Dien reviews by screenshot and comments on specific elements. Apply every point, then report what changed per point.
-- Use the `/impeccable` skill for design work (Dien asked for it). Its decision page and structured questions are welcome when a real choice is open.
-- Before inventing something new (a new section style, a new color use), check it against the Don'ts list above. When in doubt, ask Dien rather than guess.
-- Iteration history, for context: (1) cream dossier mockup, rejected; (2) Halyard structure with the "Whisper Sonogram" direction chosen on the impeccable decision page (seed `a44053e7`); (3) removed monospace and thin type, switched to framed cards with UI fragments; (4) switched the font to SF Pro and fixed floating text and small card text; (5) removed eyebrows and tint fills, added the grid texture, streaming sonograms and scroll decrypt transitions. Version (5) is approved as "cukup bagus" (good enough) and is the baseline for `apps/web`.
+## Guide, walkthrough and profile · 12 October 2026
 
-## Data truth constraints (what the UI may show)
+Dien found the numbered role-flow chips on working pages overstimulating. Pages now show one quiet line, "Step N of M for buyers/scouts", with the current step and a "How this works" link to `/guide?role=…#step-N`. The full explanation lives on `/guide` (Read mode): a Buyer/Scout switch, a game-style walkthrough, then the numbered steps with a sealed/yours/public "who sees what" list and a link to the real page.
 
-These rules come from the API and the program, not from taste. A mockup that breaks them promises something the product cannot do. Two earlier mockups did, and were corrected on 11 Oct 2026.
+The walkthrough (`components/walkthrough.tsx`) runs six quests per role inside a dashed sandbox copy of app UI. The target control carries an amber pulsing ring. A dark coach panel gives the instruction and, after the action, "What just happened" in amber with the mechanism explained. Progress dashes turn amber when done. Everything is local and synthetic, labelled as such; nothing is signed or sent. Reduced motion removes the pulse and entry animations.
 
-- **Before purchase, strength is market-wide only.** `GET /v1/markets/:id` returns `preview: { backed, weak, medium, strong }`. These are counts of options per strength bucket for the whole market, and are `null` before the Auction stage. Never attach a strength, weight, team name or reason to a specific option before the buyer has an allocation and decrypts.
-- **Public option data is index, category and opt-in flag only.** The team behind an option (`teamRef`) is private until the buyer's signals are allowed by the onchain allocation (`GET /v1/markets/:id/signals`, login required).
-- **Reasons have a minimum length.** The market's `minReasonLen` is 200 characters on devnet, and `POST /v1/reasons` rejects shorter text. Example reasons must be at least that long, and the stake form shows a counter.
-- **Stake range, reserve and flat price come from the market account.** Read `minStake`, `maxStake`, `reservePrice` and `flatPrice` from `GET /v1/markets` instead of hard-coding them. Amounts are USDC with 6 decimals.
-- **The market list exists.** `GET /v1/markets` (optional `?status=`) returns `{ markets: [...] }`, sorted newest first.
+`/profile` shows one side at a time: As a buyer (public to scouts; pseudonym derived from the onchain pseudonym hash, operator verification and a track record recomputed in the browser from Bid, OutcomeRecord and Dispute accounts) or As a scout (tier, epoch and positions from this device only, encrypted track record). The two sides are never rendered together, and the scout side recommends a separate wallet. Scouts can open a buyer's public record at `/profile/buyer/<address>`. The header carries "How it works" and "Profile" links.
 
-## Implementation notes for `apps/web` (Vite + React + TypeScript + Tailwind)
+## Single-row app header · 12 October 2026
 
-- The SDK runs in the browser with a few polyfills and two shims. Follow `docs/web-sdk-bundling.md` for the Vite config.
-- Map the frontmatter tokens into `tailwind.config` `theme.extend` (colors, borderRadius, fontFamily). Keep token names identical.
-- Put the grid texture, sonogram stream, hatch, pulse and decrypt keyframes in one global CSS file. The reference CSS is in `docs/design-reference/Main.dc.html` inside `<helmet><style>`.
-- Generate sonogram columns deterministically. Use a seeded PRNG (Park–Miller, `s = s * 16807 % 2147483647`), three formant bands following slow sine curves, and a burst envelope. Each column is a `linear-gradient(to top, …)` with hard stops per cell; colors come from solid mixes between two palette colors, never alpha. See `columns()`, `value()` and `mix()` in `Main.dc.html`. Prefer a `<canvas>` in production if DOM column count hurts performance.
-- Demo data in the mockups (Team Lumen, Team Nadi, Team Arka, weights 0.44 / 0.38 / 0.18, reasons) is synthetic. Replace it with data from the SDK and server, and keep the "Demo data" label wherever synthetic data remains. The 213.58 USDC claim by scout "ayu" is a real devnet test result (market 3).
+Dien asked for a shorter header. The app header is one row: wordmark and the current role's tools on the left (active tool underlined); on the right a compact role switch (icon and role name, the purpose kept as title and screen-reader text), a divider, How it works, Profile, theme and wallet. The "Use Bisik as" label and the role purpose sentence are removed; the guide carries that explanation. It is 60px tall at 1440px. At 1180px and below the role tools drop to a second row; at 760px and below the order is wordmark, theme and wallet, then the full-width role switch, then the help links, then the tools. This supersedes the two-part layout described under "Role workspaces".
 
-## Fullscreen hero and dark mode · Dien, 11 October 2026
+## Profile packaging and info tips · 12 October 2026
 
-Dien requested a complete fullscreen opening at every browser zoom, more interaction using the existing motion language, and dark mode. The opening includes header, hero copy and lifecycle rail in a flex column with a 100dvh minimum. The rail participates in normal flow. Typography and vertical rhythm adapt to viewport width and height. If extreme browser zoom leaves less space than the intrinsic content, `useFullscreenHero` proportionally fits the entire opening using CSS zoom; this affects only the opening, not app screens or the rest of the landing. Resizing and font loading recalculate it. No hero content is hidden or cropped.
+Dien found the first profile read like raw information. Secondary explanations now sit behind an info icon (`components/info-tip.tsx`): a dark tooltip with an amber title, opened on hover or keyboard focus, and pinned to the bottom of the screen below 560px so it never overflows. The profile has a compact title row with the buyer/scout switch on the right. An identity card leads each side: a 5×5 mirrored block mark drawn from the buyer pseudonym hash (amber accent cell) or a three-bar tier mark for scouts, the name, a wallet chip, a status pill and a copy-link action. Below it sit bento number cards (pill label, 52px regular number, a mini visual such as lock icons or a segmented bar with legend, and one plain sentence), then for scouts an epoch card with a progress track and next-result status. Notes use a gray note card with an icon and a dark first sentence. The buyer "Try demo" tool was removed; the walkthrough on `/guide` replaces it, while `/demo` stays reachable by URL.
 
-Dark mode uses semantic surface tokens: canvas #111318, panel #1E2129, frame #292D37, border #494E5D, soft border #373C48, grid #1C2029, text #F3F2EC, secondary text #C9CBD3, link/focus accent #A0A4FF. Primary button fields remain ultramarine; the hero uses ultramarine-deep #1B1F96 with ink header/rail. Amber retains its visibility meaning and dark ink text. Neutral surfaces, forms, public pills, navigation and browser controls adapt together. A labelled sun/moon control is available in both headers. The saved `bisik:theme` preference takes priority over the initial system preference and is applied before React renders.
+## Dark default, verification gate and live data · 12 October 2026
 
-Motion retains the approved signal stream and decrypt masks. Hero amber reveal lasts 800ms; control colors and directional SVG feedback last 180ms. Histogram bars and split bars fill from the baseline; non-scroll-timeline browsers use an intersection-triggered fallback. Sonograms pause offscreen or while the tab is hidden; hatches/member pulses pause offscreen. Reduced motion disables movement while keeping content and state feedback visible.
+Dark is the default theme for every visitor. Light applies only after the visitor presses the theme toggle, saved as `bisik:theme-choice` (the old `bisik:theme` key was written on every load and is ignored). In dark mode the walkthrough coach and info tooltips use a near-black fill with a 1px border so they separate from dark cards.
+
+The scout "Get verified" tab is gone. Unverified scouts can read any market; pressing stake or add team sends them to `/scout/onboard?next=…`, which offers a Continue button back once they are verified. The profile keeps its own Get verified entry.
+
+Market data no longer polls on timers. The server keeps markets in memory, rebuilds them when a confirmed program transaction appears (log subscription on the scan RPC, with a two-minute safety refresh), and pushes a data version over `/v1/events`. Pages remember the last response for instant rendering and refetch only when the version changes.

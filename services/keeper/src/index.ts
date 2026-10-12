@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { ed25519 } from "@noble/curves/ed25519";
+import { decideEpochTiers, type TiersAttempt } from "./epoch.js";
 import { makeProvider, program as mkProgram, pdas, PROGRAM_ID, Status, Kind, arciumAccounts, queueAndWait, anchor, STATUS_NAMES } from "@bisik/sdk";
 
 dotenv.config({ path: fileURLToPath(new URL("../../../.env", import.meta.url)) });
@@ -164,27 +165,74 @@ async function step(pubkey: PublicKey, m: any): Promise<string | null> {
  */
 const REP_FROM_MARKET = Number(process.env.KEEPER_REP_FROM_MARKET ?? 0);
 
-async function creditReputation(market: PublicKey, marketId: number): Promise<void> {
+/** Returns true while settled positions of this market still await a reputation credit. */
+async function creditReputation(market: PublicKey, marketId: number): Promise<boolean> {
   // Positions staked before the option/credit key fix cannot be decrypted correctly: skip them.
-  if (marketId < REP_FROM_MARKET) return;
+  if (marketId < REP_FROM_MARKET) return false;
   const rep = P.reputation();
   const r: any = await program.account.reputation.fetchNullable(rep);
-  if (!r || !r.ready || r.busy) return;
+  if (!r || !r.ready) return false;
   const ps = await scan.account.position.all([{ memcmp: { offset: 8, bytes: market.toBase58() } }]);
   for (const p of ps) {
     if (!p.account.settled) continue;
     const repCredit = P.repCredit(p.publicKey);
-    if (await conn.getAccountInfo(repCredit, "confirmed")) continue;
+    // `done = false` on an existing account means the MPC callback failed: retry it (init_if_needed).
+    const c: any = await program.account.repCredit.fetchNullable(repCredit);
+    if (c?.done) continue;
+    if (r.busy) return true; // one computation at a time on the table; try next tick
     await queue("credit_reputation", (o) =>
       program.methods.creditReputation(o).accountsPartial({ payer: operator.publicKey, market, position: p.publicKey, rep, repCredit, ...arc(o, "credit_reputation") }),
     );
-    log(`market ${(await program.account.market.fetch(market)).id} [Settled] → credit_reputation`);
+    log(`market ${marketId} [Settled] → credit_reputation`);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * D6 / F10: reveal next epoch's tier levels once per epoch, near its end (see epoch.ts).
+ * The keeper never rotates the epoch: rotation stays an operator action (Admin page).
+ * KEEPER_EPOCH_TIERS=0 disables it; KEEPER_TIERS_LEAD_SEC sets how early it may run.
+ */
+const TIERS_ENABLED = process.env.KEEPER_EPOCH_TIERS !== "0";
+const TIERS_LEAD_SEC = Number(process.env.KEEPER_TIERS_LEAD_SEC ?? 3600);
+let tiersFailure: TiersAttempt | null = null;
+let tiersCheckedAt = 0;
+
+async function epochTiers(pendingCredits: boolean, force = false): Promise<void> {
+  const cfg: any = await program.account.config.fetch(P.config());
+  const rep: any = await program.account.reputation.fetchNullable(P.reputation());
+  const c = { currentEpoch: Number(cfg.currentEpoch), epochStart: Number(cfg.epochStart), epochLen: Number(cfg.epochLen) };
+  const state = rep && { ready: rep.ready, busy: rep.busy, tiersEpoch: Number(rep.tiersEpoch), tiersReady: rep.tiersReady };
+  const d = decideEpochTiers(c, state, now(), { leadSec: TIERS_LEAD_SEC, force, pendingCredits, lastFailure: tiersFailure });
+  if (!d.run) {
+    if (force) log(`epoch_tiers skipped for epoch ${d.next}: ${d.reason}`);
     return;
+  }
+  try {
+    await queue("epoch_tiers", (o) =>
+      program.methods.epochTiers(o).accountsPartial({ payer: operator.publicKey, config: P.config(), rep: P.reputation(), ...arc(o, "epoch_tiers") }),
+    );
+  } catch (e) {
+    // A finalization timeout leaves rep.busy/tiers_epoch set, so the guards stop a resend;
+    // a rejected transaction or failed callback is retried after the backoff.
+    tiersFailure = { epoch: d.next, at: now(), failures: tiersFailure?.epoch === d.next ? tiersFailure.failures + 1 : 1 };
+    throw e;
+  }
+  const after: any = await program.account.reputation.fetch(P.reputation());
+  if (after.tiersReady && Number(after.tiersEpoch) === d.next) {
+    tiersFailure = null;
+    const n = (after.tiers as any[]).filter((x) => BigInt(x.toString()) !== 0n).length;
+    log(`epoch_tiers revealed for epoch ${d.next} (${n} credited scouts)`);
+  } else {
+    tiersFailure = { epoch: d.next, at: now(), failures: tiersFailure?.epoch === d.next ? tiersFailure.failures + 1 : 1 };
+    log(`epoch_tiers for epoch ${d.next} finalized without a reveal (callback failed); will retry`);
   }
 }
 
 async function tick() {
   const markets = await scan.account.market.all();
+  let pendingCredits = false;
   for (const { publicKey, account } of markets) {
     if (account.status === Status.Settled) {
       if (!account.feesWithdrawn && (account.pools as any[]).some((x) => Number(x) > 0)) {
@@ -196,7 +244,11 @@ async function tick() {
           log(`market ${account.id} withdraw_fees error: ${String(e?.message ?? e).slice(0, 160)}`);
         }
       }
-      await creditReputation(publicKey, Number(account.id)).catch((e) => log(`market ${account.id} credit_reputation error: ${String(e?.message ?? e).slice(0, 160)}`));
+      pendingCredits =
+        (await creditReputation(publicKey, Number(account.id)).catch((e) => {
+          log(`market ${account.id} credit_reputation error: ${String(e?.message ?? e).slice(0, 160)}`);
+          return true;
+        })) || pendingCredits;
       continue;
     }
     try {
@@ -206,9 +258,19 @@ async function tick() {
       log(`market ${account.id} [${STATUS_NAMES[account.status]}] error: ${String(e?.message ?? e).slice(0, 200)}`);
     }
   }
+  // Two account reads per check: once a minute is enough for a 1-hour default lead window.
+  if (TIERS_ENABLED && now() - tiersCheckedAt >= 60) {
+    tiersCheckedAt = now();
+    await epochTiers(pendingCredits).catch((e) => log(`epoch_tiers error: ${String(e?.message ?? e).slice(0, 200)}`));
+  }
 }
 
 const once = process.argv.includes("--once");
+if (process.argv.includes("--tiers-now")) {
+  // Operator one-shot before a manual rotate_epoch: reveal next epoch's tiers now (guards still apply).
+  await epochTiers(false, true).catch((e) => log(`epoch_tiers error: ${String(e?.message ?? e).slice(0, 200)}`));
+  process.exit(0);
+}
 log(`keeper started (rpc ${RPC}, operator ${operator.publicKey.toBase58()})`);
 do {
   await tick().catch((e) => log("tick failed:", e?.message ?? e));

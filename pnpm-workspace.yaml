@@ -1,6 +1,7 @@
 packages:
   - "packages/*"
   - "apps/*"
+  - "!apps/web-backup"
   - "services/*"
   - "contracts"
   - scripts

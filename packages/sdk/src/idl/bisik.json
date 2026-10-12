@@ -360,6 +360,57 @@
         {
           "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "bid",
+          "docs": [
+            "Only its owner and length are read, to avoid counting the market twice."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  105,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              },
+              {
+                "kind": "account",
+                "path": "payer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyer_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  101,
+                  99
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "payer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -728,6 +779,52 @@
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "buyer_profile",
+          "docs": [
+            "Required for auction rounds: the creator must be a verified buyer."
+          ],
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  121,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyer_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  101,
+                  99
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
         }
       ],
       "args": [
@@ -2469,6 +2566,27 @@
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "buyer_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  101,
+                  99
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "payer"
+              }
+            ]
+          }
         }
       ],
       "args": [
@@ -2516,6 +2634,27 @@
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "buyer_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  101,
+                  99
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "buyer"
+              }
+            ]
+          }
         }
       ],
       "args": [
@@ -2566,7 +2705,7 @@
     {
       "name": "pay_team_share",
       "docs": [
-        "Team share (D-08, 5%) for buyer i, paid to the deploy wallet of an opted-in successful option."
+        "Legacy entry point retained for ABI compatibility. Team payments were removed on 12 Oct 2026."
       ],
       "discriminator": [
         124,
@@ -3099,6 +3238,13 @@
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "buyer_record",
+          "docs": [
+            "N1 record of `market.buyers[buyer_index]` (index range is checked in the handler)."
+          ],
+          "writable": true
         }
       ],
       "args": [
@@ -3207,7 +3353,8 @@
     {
       "name": "register_deploy_wallet",
       "docs": [
-        "Team opt-in (D-09): the operator registers the team's deploy wallet after the team claims it."
+        "With the team's consent and ownership verified, register a deploy wallet for outcome checks.",
+        "Legacy opt-in fields now indicate wallet registration only; they confer no payment rights."
       ],
       "discriminator": [
         85,
@@ -3634,6 +3781,7 @@
       "accounts": [
         {
           "name": "operator",
+          "writable": true,
           "signer": true
         },
         {
@@ -3700,6 +3848,32 @@
         {
           "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "buyer_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  101,
+                  99
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "dispute.buyer",
+                "account": "Dispute"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -4010,6 +4184,7 @@
       "accounts": [
         {
           "name": "operator",
+          "writable": true,
           "signer": true
         },
         {
@@ -4033,6 +4208,17 @@
         {
           "name": "market",
           "writable": true
+        },
+        {
+          "name": "buyer_record",
+          "docs": [
+            "N1 record of `market.buyers[buyer_index]` (index range is checked in the handler)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -4554,6 +4740,19 @@
       ]
     },
     {
+      "name": "BuyerRecord",
+      "discriminator": [
+        107,
+        122,
+        54,
+        31,
+        4,
+        54,
+        209,
+        38
+      ]
+    },
+    {
       "name": "Config",
       "discriminator": [
         155,
@@ -5040,6 +5239,11 @@
       "code": 6023,
       "name": "PositionSlashed",
       "msg": "Position slashed"
+    },
+    {
+      "code": 6024,
+      "name": "TeamShareRemoved",
+      "msg": "Automatic team payments have been removed"
     }
   ],
   "types": [
@@ -5284,6 +5488,61 @@
           {
             "name": "verified",
             "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BuyerRecord",
+      "docs": [
+        "N1: onchain buyer track record. A separate PDA (`[\"brec\", buyer]`) so the existing",
+        "`BuyerProfile` layout stays unchanged. Counters only cover activity after the",
+        "13 Oct 2026 upgrade; earlier activity is reconstructed offchain from existing accounts."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "markets_joined",
+            "docs": [
+              "Markets the buyer put money into: exclusive creation, an auction bid, or a flat",
+              "purchase without an earlier bid in the same market."
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "outcomes_recorded",
+            "docs": [
+              "OutcomeRecords written for this buyer (by the buyer or by the operator oracle)."
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "defaults_applied",
+            "docs": [
+              "Times the D-05 default outcome was applied because the buyer reported nothing."
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "disputes_opened",
+            "type": "u32"
+          },
+          {
+            "name": "disputes_upheld",
+            "type": "u32"
+          },
+          {
+            "name": "disputes_rejected",
+            "type": "u32"
           },
           {
             "name": "bump",

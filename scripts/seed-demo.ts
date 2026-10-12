@@ -169,7 +169,7 @@ async function setup() {
     const charity = await ata(demoKeypair("charity").publicKey);
     await rpc(
       program.methods
-        .initConfig({ operator: operator.publicKey, treasury, charity, feeBps: 1500, teamBps: 500, epochLen: new anchor.BN(30 * 86400), kMin: 5, demoMode: true })
+        .initConfig({ operator: operator.publicKey, treasury, charity, feeBps: 1500, teamBps: 0, epochLen: new anchor.BN(30 * 86400), kMin: 5, demoMode: true })
         .accounts({ admin: operator.publicKey, config: P.config(), usdcMint: mint }),
     );
     st.mint = mint.toBase58();
@@ -210,6 +210,10 @@ async function setup() {
   await mintTo(conn, operator, mint, opTok, operator, 10_000e6);
   st.markets = st.markets ?? [];
   const specs = process.env.SEED_ONLY_AUCTION === "1" ? MARKETS.filter((m) => m.kind === 1) : MARKETS;
+  // Auction rounds may only be opened by a verified buyer (13 Oct upgrade, replaces D-02).
+  // The demo operator registers itself as a buyer so it can open the demo auction round.
+  if (specs.some((m) => m.kind === 1) && !(await exists(P.buyer(operator.publicKey))))
+    await rpc(program.methods.registerBuyer(operator.publicKey, Array.from(keccak(utf8("buyer|operator-desk")))).accounts({ operator: operator.publicKey, config: P.config(), buyer: P.buyer(operator.publicKey) }));
   for (const spec of specs) {
     const cfgNow = await program.account.config.fetch(P.config());
     const id = Number(cfgNow.marketCount);
@@ -235,7 +239,19 @@ async function setup() {
           earlyBonusBps: 15000,
           initialPool: USDC(spec.initialPool),
         })
-        .accounts({ creator: operator.publicKey, config: P.config(), market, agg: P.agg(market), auction: P.auction(market), escrow: P.escrow(market), usdcMint: mint, creatorToken: opTok, tokenProgram: TOKEN_PROGRAM_ID }),
+        .accounts({
+          creator: operator.publicKey,
+          config: P.config(),
+          market,
+          agg: P.agg(market),
+          auction: P.auction(market),
+          escrow: P.escrow(market),
+          usdcMint: mint,
+          creatorToken: opTok,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          buyerProfile: spec.kind === 1 ? P.buyer(operator.publicKey) : null,
+          buyerRecord: P.buyerRecord(operator.publicKey),
+        }),
     );
     const mi = MARKETS.indexOf(spec);
     // encrypted state (the keeper would also do this)
@@ -310,7 +326,7 @@ async function bids(id: number) {
     const bid = P.bid(market, buyer.publicKey);
     const tok = (await getOrCreateAssociatedTokenAccount(conn, operator, (await program.account.config.fetch(P.config())).usdcMint, buyer.publicKey, true)).address;
     if (!(await exists(bid)))
-      await rpc(program.methods.openBid(USDC(p.ceiling)).accounts({ payer: buyer.publicKey, config: P.config(), buyerProfile: P.buyer(buyer.publicKey), market, bid, payerToken: tok, escrow: P.escrow(market), tokenProgram: TOKEN_PROGRAM_ID }), [buyer]);
+      await rpc(program.methods.openBid(USDC(p.ceiling)).accounts({ payer: buyer.publicKey, config: P.config(), buyerProfile: P.buyer(buyer.publicKey), market, bid, payerToken: tok, escrow: P.escrow(market), tokenProgram: TOKEN_PROGRAM_ID, buyerRecord: P.buyerRecord(buyer.publicKey) }), [buyer]);
     const enc = encryptForMxe(mxeKey, [BigInt(p.amount * 1e6)]);
     await queueAndWait(provider, PROGRAM_ID, (o) =>
       program.methods
@@ -413,7 +429,7 @@ async function buyFlat(id: number, name: string) {
   const market = P.market(id);
   const mint = (await program.account.config.fetch(P.config())).usdcMint;
   const tok = (await getOrCreateAssociatedTokenAccount(conn, operator, mint, buyer.publicKey, true)).address;
-  await rpc(program.methods.buyFlat().accounts({ payer: buyer.publicKey, config: P.config(), buyerProfile: P.buyer(buyer.publicKey), market, payerToken: tok, escrow: P.escrow(market), tokenProgram: TOKEN_PROGRAM_ID }), [buyer]);
+  await rpc(program.methods.buyFlat().accounts({ payer: buyer.publicKey, config: P.config(), buyerProfile: P.buyer(buyer.publicKey), market, payerToken: tok, escrow: P.escrow(market), tokenProgram: TOKEN_PROGRAM_ID, bid: P.bid(market, buyer.publicKey), buyerRecord: P.buyerRecord(buyer.publicKey) }), [buyer]);
   log(`${name} bought the remaining signals at the flat price`);
 }
 

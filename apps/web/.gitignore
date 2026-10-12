@@ -2,4 +2,5 @@
 /public/artifacts/
 /.review/
 /node_modules/
+/node_modules
 /public/artifacts/

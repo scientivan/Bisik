@@ -30,7 +30,7 @@ export const DEFAULT_PARAMS = {
   x: 3,
   earlyBonusStartBps: 15_000,
   feeBps: 1_500,
-  teamBps: 500,
+  teamBps: 0,
   kMin: 5,
   epochLenSecs: 30 * 24 * 60 * 60,
 } as const;

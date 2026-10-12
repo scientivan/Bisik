@@ -23,3 +23,5 @@ const app = createApp({
   cfg: { dataKey: env.dataKey(), jwtSecret: env.jwtSecret(), salt: env.platformSalt(), publicUrl: env.publicUrl, reclaim, enforceLoginOnly: process.env.BISIK_ENFORCE_LOGIN_ONLY !== "0", demo: env.demo },
 });
 serve({ fetch: app.fetch, port: env.port }, (i) => console.log(`bisik server on :${i.port} (rpc ${env.rpcUrl})`));
+// Warm the market cache and start the change subscription before the first visitor arrives.
+if (chain) void Promise.resolve(app.request("/v1/markets")).catch(() => {});

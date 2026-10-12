@@ -190,7 +190,7 @@ async function main() {
       treasury,
       charity,
       feeBps: 1500,
-      teamBps: 500,
+      teamBps: 0,
       epochLen: new anchor.BN(30 * 86400),
       kMin: 5,
       demoMode: true,
@@ -266,8 +266,8 @@ async function main() {
   const escrow = pda(seed("escrow"), market.toBuffer());
   const adminTok = await ata(admin.publicKey);
   await mintTo(conn, admin, mint, adminTok, admin, 10_000e6);
-  await program.methods
-    .createMarket({
+  const brec = (k: PublicKey) => pda(seed("brec"), k.toBuffer());
+  const marketArgs = {
       kind: 1,
       category: 1,
       questionHash: Array.from(keccak(utf8("Most promising DeFi team still open to choosing a chain? (DEMO)"))),
@@ -285,8 +285,8 @@ async function main() {
       flatPrice: USDC(90),
       earlyBonusBps: 15000,
       initialPool: new anchor.BN(0),
-    })
-    .accounts({
+  };
+  const createAccounts = (buyerProfile: PublicKey | null) => ({
       creator: admin.publicKey,
       config: configPda,
       market,
@@ -296,7 +296,22 @@ async function main() {
       usdcMint: mint,
       creatorToken: adminTok,
       tokenProgram: TOKEN_PROGRAM_ID,
-    })
+      buyerProfile,
+      buyerRecord: brec(admin.publicKey),
+  });
+  // Auction rounds are opened by verified buyers only (13 Oct, replaces D-02).
+  await assert.rejects(
+    program.methods.createMarket(marketArgs).accounts(createAccounts(null)).signers([admin]).rpc({ commitment: "confirmed" }),
+    "an unverified wallet cannot open an auction round",
+  );
+  await program.methods
+    .registerBuyer(admin.publicKey, Array.from(keccak(utf8("pseudonym-auction-creator"))))
+    .accounts({ operator: admin.publicKey, config: configPda, buyer: pda(seed("buyer"), admin.publicKey.toBuffer()) })
+    .signers([admin])
+    .rpc({ commitment: "confirmed", skipPreflight: true });
+  await program.methods
+    .createMarket(marketArgs)
+    .accounts(createAccounts(pda(seed("buyer"), admin.publicKey.toBuffer())))
     .signers([admin])
     .rpc({ commitment: "confirmed", skipPreflight: true });
   await queue("init_market_agg", (o) => program.methods.initMarketState(o).accountsPartial({ payer: admin.publicKey, market, agg, ...arciumAccs(o, "init_market_agg") }), [admin]);
@@ -428,7 +443,7 @@ async function main() {
     const bidPda = pda(seed("bid"), market.toBuffer(), buyer.publicKey.toBuffer());
     await program.methods
       .openBid(USDC(bd.ceiling))
-      .accounts({ payer: buyer.publicKey, config: configPda, buyerProfile: pda(seed("buyer"), buyer.publicKey.toBuffer()), market, bid: bidPda, payerToken: buyerTok[bd.b], escrow, tokenProgram: TOKEN_PROGRAM_ID })
+      .accounts({ payer: buyer.publicKey, config: configPda, buyerProfile: pda(seed("buyer"), buyer.publicKey.toBuffer()), market, bid: bidPda, payerToken: buyerTok[bd.b], escrow, tokenProgram: TOKEN_PROGRAM_ID, buyerRecord: brec(buyer.publicKey) })
       .signers([buyer])
       .rpc({ commitment: "confirmed", skipPreflight: true });
     await queue(
@@ -467,7 +482,7 @@ async function main() {
   await program.methods.selectHidden([1]).accounts({ buyer: buyers[1].publicKey, market }).signers([buyers[1]]).rpc({ commitment: "confirmed", skipPreflight: true });
   await program.methods
     .buyFlat()
-    .accounts({ payer: buyers[2].publicKey, config: configPda, buyerProfile: pda(seed("buyer"), buyers[2].publicKey.toBuffer()), market, payerToken: buyerTok[2], escrow, tokenProgram: TOKEN_PROGRAM_ID })
+    .accounts({ payer: buyers[2].publicKey, config: configPda, buyerProfile: pda(seed("buyer"), buyers[2].publicKey.toBuffer()), market, payerToken: buyerTok[2], escrow, tokenProgram: TOKEN_PROGRAM_ID, bid: pda(seed("bid"), market.toBuffer(), buyers[2].publicKey.toBuffer()), buyerRecord: brec(buyers[2].publicKey) })
     .signers([buyers[2]])
     .rpc({ commitment: "confirmed", skipPreflight: true });
   log("selection order enforced; flat buyer joined");
@@ -523,7 +538,7 @@ async function main() {
   const outcome = (bi: number, opt: number, signer: Keypair) =>
     program.methods
       .recordOutcome(bi, opt, 0, Array.from(keccak(utf8(`deploy-evidence-${bi}-${opt}`))))
-      .accounts({ signer: signer.publicKey, config: configPda, market, outcome: pda(seed("outcome"), market.toBuffer(), Buffer.from([bi]), u16le(opt)) })
+      .accounts({ signer: signer.publicKey, config: configPda, market, outcome: pda(seed("outcome"), market.toBuffer(), Buffer.from([bi]), u16le(opt)), buyerRecord: brec(buyers[bi].publicKey) })
       .signers([signer])
       .rpc({ commitment: "confirmed", skipPreflight: true });
   // flat buyer (index 2) cannot see option 0 (hidden by #1)
@@ -534,15 +549,28 @@ async function main() {
   const hoax = positions[3];
   await program.methods
     .openDispute(Array.from(keccak(utf8("claim: led migration of X"))), Array.from(keccak(utf8("evidence: public commit history"))))
-    .accounts({ buyer: buyers[2].publicKey, market, position: hoax.pda, dispute: pda(seed("dispute"), market.toBuffer(), Buffer.from(hoax.nullifier)) })
+    .accounts({ buyer: buyers[2].publicKey, market, position: hoax.pda, dispute: pda(seed("dispute"), market.toBuffer(), Buffer.from(hoax.nullifier)), buyerRecord: brec(buyers[2].publicKey) })
     .signers([buyers[2]])
     .rpc({ commitment: "confirmed", skipPreflight: true });
   await program.methods
     .resolveDispute(true)
-    .accounts({ operator: admin.publicKey, config: configPda, market, position: hoax.pda, dispute: pda(seed("dispute"), market.toBuffer(), Buffer.from(hoax.nullifier)), escrow, charityToken: charity, tokenProgram: TOKEN_PROGRAM_ID })
+    .accounts({ operator: admin.publicKey, config: configPda, market, position: hoax.pda, dispute: pda(seed("dispute"), market.toBuffer(), Buffer.from(hoax.nullifier)), escrow, charityToken: charity, tokenProgram: TOKEN_PROGRAM_ID, buyerRecord: brec(buyers[2].publicKey) })
     .signers([admin])
     .rpc({ commitment: "confirmed", skipPreflight: true });
   assert.equal(Number((await getAccount(conn, charity)).amount), 20e6, "slashed stake to charity");
+  {
+    // N1: onchain buyer records. Buyer 2 bid, lost, then bought flat: one market, not two.
+    const r2: any = await program.account.buyerRecord.fetch(brec(buyers[2].publicKey));
+    assert.deepEqual(
+      [r2.marketsJoined, r2.outcomesRecorded, r2.defaultsApplied, r2.disputesOpened, r2.disputesUpheld, r2.disputesRejected],
+      [1, 1, 0, 1, 1, 0],
+      "buyer 2 record",
+    );
+    const r0: any = await program.account.buyerRecord.fetch(brec(buyers[0].publicKey));
+    assert.deepEqual([r0.marketsJoined, r0.outcomesRecorded], [1, 1], "buyer 0 record");
+    const rc: any = await program.account.buyerRecord.fetch(brec(admin.publicKey));
+    assert.equal(rc.marketsJoined, 0, "auction creator joins only by bidding");
+  }
   log("outcomes recorded; hoax upheld → 20 USDC to charity");
 
   // ── 10. Settlement ──

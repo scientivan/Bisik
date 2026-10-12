@@ -1,9 +1,9 @@
-import { useFullscreenHero } from "../lib/motion";
+import { useState } from "react";
+import { LandingHeader } from "../components/landing-header";
 import { Link } from "react-router-dom";
 import {
   Frame,
   Hatch,
-  Header,
   Icon,
   Mark,
   Note,
@@ -12,19 +12,20 @@ import {
   StrengthBars,
 } from "../components/ui";
 export default function Landing() {
-  useFullscreenHero();
+  const [revealed, setRevealed] = useState(false);
   return (
     <>
       <div className="landing-opening">
-        <Header landing />
+        <LandingHeader />
         <section className="hero" id="top">
-          <Sonogram />
-          <div className="hero-reveal">
-            <Sonogram variant="revealed" seed={31} speed={80} />
-            <Pill state="yours">
-              <Icon name="lock" />
-              Decrypted for Ecosystem A (demo)
-            </Pill>
+          <div className={`hero-art ${revealed ? "is-revealed" : ""}`}>
+            <div className="signal-sheet sheet-back" aria-hidden="true"><Sonogram variant="dark" seed={71} speed={90} /></div>
+            <div className="signal-sheet sheet-middle" aria-hidden="true"><Sonogram seed={17} /></div>
+            <button className="signal-sheet sheet-front" onClick={() => setRevealed(!revealed)} aria-pressed={revealed} aria-label={revealed ? "Seal the synthetic demo signal" : "Decrypt the synthetic demo signal"}>
+              <div className="art-label"><Mark /><span>Private signal · Demo</span><Icon name={revealed ? "check" : "lock"} /></div>
+              <div className="art-stream"><Sonogram variant={revealed ? "revealed" : "dark"} seed={31} speed={80} /></div>
+              <div className="art-caption" aria-live="polite">{revealed ? "Picks a chain within 14 days." : "Someone knows. Only you can listen."}<Icon name={revealed ? "check" : "arrow"} /></div>
+            </button>
           </div>
           <div className="hero-copy">
             <h1>
@@ -38,10 +39,10 @@ export default function Landing() {
               what stays sealed onchain.
             </p>
             <div className="row">
-              <Link className="button bone" to="/markets">
+              <Link className="button" to="/markets">
                 Open the app <Icon />
               </Link>
-              <a className="button on-blue-outline" href="#mechanism">
+              <a className="hero-text-link" href="#mechanism">
                 See the mechanism
               </a>
             </div>
@@ -69,7 +70,7 @@ export default function Landing() {
           </div>
         </section>
       </div>
-      <main id="main">
+      <main id="main" className="landing-main">
         <div className="container">
           <section className="landing-section mechanism-layout" id="mechanism">
             <div className="section-heading">
@@ -173,8 +174,8 @@ export default function Landing() {
             <Note dark title="Scouts sell what they saw and what they think, never a team’s private documents.">
               A scout reports their own observation, such as what a founder
               said in a mentoring session, and their judgement of it. Sharing a
-              team’s files, contracts or data rooms breaks Bisik’s rules, and teams can
-              opt in to take a 5% share of what buyers pay.
+              team’s files, contracts or data rooms breaks Bisik’s rules. Teams do
+              not need a Bisik account for a scout to submit a signal.
             </Note>
           </section>
           <section className="landing-section" id="parts">
@@ -300,17 +301,16 @@ export default function Landing() {
             <div className="pay-grid">
               <div className="pay-card pay-main">
                 <div className="row between">
-                  <span className="big">80%</span>
+                  <span className="big">85%</span>
                   <Pill state="yours">Scouts</Pill>
                 </div>
                 <div className="split-bar">
                   <span />
                   <span />
-                  <span />
                 </div>
                 <p>
                   Of each buyer payment goes to the scouts behind the successful
-                  options. It is 85% when no team takes a share.
+                  options, or the strongest purchased signal when none succeeds.
                 </p>
                 <Sonogram variant="pay" seed={43} speed={90} />
               </div>
@@ -320,13 +320,6 @@ export default function Landing() {
                   <Pill state="sealed">Platform</Pill>
                 </div>
                 <p>Keeps the market running.</p>
-              </div>
-              <div className="pay-card">
-                <div className="row between">
-                  <span className="big">5%</span>
-                  <Pill state="blue">Team</Pill>
-                </div>
-                <p>For a successful team that opted in.</p>
               </div>
               <div className="pay-card pay-stake">
                 <span className="big">100%</span>
@@ -471,6 +464,7 @@ export default function Landing() {
         </div>
       </main>
       <footer className="footer">
+        <div className="footer-invitation container"><h2>Insiders whisper.<br />Buyers pay to listen.</h2><Link className="button" to="/markets">Open the app <Icon /></Link></div>
         <div className="container">
           <Link className="wordmark" to="/">
             <Mark />

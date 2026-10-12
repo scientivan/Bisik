@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "scripts": { "start": "tsx src/index.ts", "once": "tsx src/index.ts --once", "typecheck": "tsc -p . --noEmit" },
+  "scripts": { "start": "tsx src/index.ts", "once": "tsx src/index.ts --once", "tiers-now": "tsx src/index.ts --tiers-now", "test": "tsx --test src/*.test.ts", "typecheck": "tsc -p . --noEmit" },
   "dependencies": {
     "@bisik/sdk": "workspace:*",
     "@noble/curves": "^1.7.0",

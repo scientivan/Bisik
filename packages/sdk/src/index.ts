@@ -60,6 +60,8 @@ export function pdas(programId: PublicKey = PROGRAM_ID) {
     group: (tier: number, epoch: number) => f(seed("group"), Buffer.from([tier]), le(epoch, 4)),
     source: (nullifier: Uint8Array) => f(seed("src"), Buffer.from(nullifier)),
     buyer: (authority: PublicKey) => f(seed("buyer"), authority.toBuffer()),
+    /** N1: onchain buyer track record (separate from BuyerProfile). */
+    buyerRecord: (authority: PublicKey) => f(seed("brec"), authority.toBuffer()),
     market: (id: number | bigint) => f(seed("market"), le(id, 8)),
     agg: (market: PublicKey) => f(seed("agg"), market.toBuffer()),
     auction: (market: PublicKey) => f(seed("auction"), market.toBuffer()),

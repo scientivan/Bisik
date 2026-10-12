@@ -9,7 +9,7 @@ import {
 import { ThemeProvider } from "./lib/theme";
 import { WalletProvider } from "./lib/wallet";
 import { Header, Note } from "./components/ui";
-import { RoleBar } from "./components/roles";
+import { WalletPicker } from "./components/wallet-picker";
 import { usePageMotion } from "./lib/motion";
 import Landing from "./pages/Landing";
 const Markets = lazy(() => import("./pages/Markets")),
@@ -19,7 +19,9 @@ const Markets = lazy(() => import("./pages/Markets")),
   Positions = lazy(() => import("./pages/Positions")),
   Create = lazy(() => import("./pages/Create")),
   Admin = lazy(() => import("./pages/Admin")),
-  Team = lazy(() => import("./pages/Team"));
+  Guide = lazy(() => import("./pages/Guide")),
+  Profile = lazy(() => import("./pages/Profile")),
+  MyBids = lazy(() => import("./pages/MyBids"));
 class Boundary extends Component<{ children: ReactNode }, { error: string }> {
   state = { error: "" };
   static getDerivedStateFromError(e: Error) {
@@ -45,15 +47,25 @@ function Content() {
     landing = location.pathname === "/";
   usePageMotion(location.pathname);
   useEffect(() => {
+    document.title = landing ? "Bisik · Insiders whisper" : "Bisik · Private signal market";
+    if (location.hash) {
+      const target = location.hash.slice(1);
+      const scroll = () => {
+        const element = document.getElementById(target);
+        if (!element) return false;
+        element.scrollIntoView({ block: "start" });
+        return true;
+      };
+      const observer = new MutationObserver(() => { if (scroll()) observer.disconnect(); });
+      observer.observe(document.getElementById("main") ?? document.body, { childList: true, subtree: true });
+      const frame = requestAnimationFrame(() => { if (scroll()) observer.disconnect(); });
+      return () => { cancelAnimationFrame(frame); observer.disconnect(); };
+    }
     window.scrollTo(0, 0);
-    document.title = landing
-      ? "Bisik · Insiders whisper"
-      : "Bisik · Private signal market";
-  }, [location.pathname]);
+  }, [location.pathname, location.hash]);
   return (
     <Boundary>
       {!landing && <Header />}
-      {!landing && <RoleBar />}
       <div
         className={landing ? "" : "container page"}
         id={landing ? undefined : "main"}
@@ -72,9 +84,12 @@ function Content() {
             <Route path="/scout/positions" element={<Positions />} />
             <Route path="/buyer/markets/:id" element={<Buyer />} />
             <Route path="/create" element={<Create />} />
-            <Route path="/team" element={<Team />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/demo" element={<Buyer demo />} />
+            <Route path="/guide" element={<Guide />} />
+            <Route path="/buyer/bids" element={<MyBids />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/buyer/:address" element={<Profile />} />
             <Route
               path="*"
               element={
@@ -95,6 +110,7 @@ export default function App() {
       <WalletProvider>
         <BrowserRouter>
           <Content />
+          <WalletPicker />
         </BrowserRouter>
       </WalletProvider>
     </ThemeProvider>

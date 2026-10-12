@@ -36,6 +36,8 @@
 
 ---
 
+> **Revisi 12 Oktober 2026:** halaman Team ditunda; 85% scout / 15% platform. Aturan ini aktif di devnet sejak upgrade 12 Okt (slot 510110372), dengan bytecode terverifikasi dan simulasi transfer tim ditolak. Payout posisi yang sudah settled tidak dihitung ulang.
+
 ## 1. Pesan inti
 
 Ulangi minimal sekali di tiap video.
@@ -100,12 +102,12 @@ Sinyal "kualitas tim" yang bisa dicek lewat GitHub atau LinkedIn sengaja **tidak
 
 - Scout melaporkan **pengamatannya sendiri** (misalnya apa yang dikatakan founder di sesi mentoring) dan **penilaiannya** atas hal itu.
 - Membagikan file, kontrak, atau data room tim **melanggar aturan Bisik**.
-- Tim bisa opt-in dan menerima 5% dari bayaran pembeli.
+- Tim tidak perlu akun Bisik untuk diusulkan dan tidak menerima bagian otomatis. Persetujuan tim diminta untuk perkenalan; wallet deploy diminta dengan persetujuan dan bukti kepemilikan saat pembeli memerlukan verifikasi hasil.
 
 **Batas yang harus jujur disebut:**
 
 - [Fakta] Aturan "bukan dokumen rahasia" adalah **kebijakan**, bukan sesuatu yang ditegakkan kode. Sengketa onchain di v1 hanya untuk hoax (klaim palsu), dan diputus operator.
-- [Inferensi] Juri bisa bertanya apakah ini sama dengan "menjual rahasia orang lain". Jawabannya: yang dijual adalah pengamatan pribadi orang dalam, tim punya jalur opt-in dan bagi hasil, dan pembeli tidak pernah tahu siapa scout-nya kecuali scout setuju (D-15).
+- [Inferensi] Juri bisa bertanya apakah ini sama dengan "menjual rahasia orang lain". Jawabannya: yang dijual adalah pengamatan pribadi orang dalam, tim dapat mengajukan keberatan sebagai kebijakan dan dimintai persetujuan untuk perkenalan, dan pembeli tidak pernah tahu siapa scout-nya kecuali scout setuju (D-15).
 
 ---
 
@@ -159,9 +161,30 @@ Urutannya mengikuti alur F0–F10. Setiap ketukan harus menunjukkan **bukti tekn
 | 7 | Pemenang #1 menyembunyikan 3 sinyal → #2 memilih dari sisanya → pembeli harga rata melihat sisanya | Pembeli #2 **tidak bisa** melihat sinyal yang disembunyikan #1 | Novelty |
 | 8 | Pembaca sinyal: alasan yang sudah difilter privasi, ringkasan pro dan kontra, klaim | Teks asli dibanding hasil filter (detail pengenal hilang) | UX |
 | 9 | Pembeli meminta perkenalan → scout menerima (D-15) | Kontak terenkripsi ke pembeli | UX, Business |
-| 10 | Tim melakukan deploy di devnet → oracle mencatat hasil | `record_outcome` di explorer | Functionality |
+| 10 | Tim melakukan deploy di devnet → oracle mencatat hasil. Tunjukkan bagian **Outcome oracle** di halaman Operator (`/admin#oracle`): siapa yang menandatangani, hash bukti, jendela yang masih terbuka | `record_outcome` di explorer, `recorded_by` = operator | Functionality |
 | 11 | Settlement → scout klaim stake + payout ke **alamat baru** | Klaim memakai bukti nullifier; alamat penerima tidak terhubung ke wallet stake | Novelty |
 | 12 | (Opsional) Sengketa hoax → slash ke dana amal | Transfer ke wallet amal | Business |
+
+### 5.1 Oracle hasil: v1 sekarang, jaringan terbuka di v2 [Keputusan Dien, 12 Okt]
+
+**Wajib disampaikan di video demo dan pitch.** Dien memutuskan jaringan oracle terbuka masuk roadmap (task N4), bukan dibangun sebelum submit.
+
+**Fakta v1** [Fakta, `contracts/programs/bisik/src/lib.rs:772`]: `record_outcome` hanya menerima tanda tangan pembeli atau `config.operator`. Belum ada pendaftaran oracle, stake oracle, voting, atau slash oracle. Setiap catatan menyimpan `recorded_by` dan hash bukti onchain.
+
+**Yang ditunjukkan di demo** (sekitar 10 detik, setelah ketukan 10): halaman Operator, bagian Outcome oracle. Tunjuk label "Signed by operator" dan hash bukti, lalu ucapkan kalimat v1 di bawah.
+
+**Kalimat untuk video** [Usulan]:
+
+- v1: *"Today the operator is the outcome oracle, and every outcome it signs is public: who signed, when, and a hash of the evidence."*
+- v2: *"Next, anyone can become a verifier. Solana deployments get checked automatically by the program. Subjective outcomes, like a grant on another chain or a hoax dispute, go to randomly drawn verifiers who stake, vote in secret, and are paid or slashed by consensus."*
+
+**Rancangan v2 yang disebut** (detail di living doc §18.3):
+
+1. **Hasil objektif** (deploy di Solana): diperiksa program tanpa oracle manusia, misalnya membaca akun ProgramData milik wallet deploy tim (upgrade authority dan slot deploy). Siapa pun boleh memicunya.
+2. **Hasil subjektif** (grant lintas chain, investasi, sengketa hoax): verifier mendaftar dengan stake USDC, dipilih acak per kasus, tidak tahu siapa verifier lain, memberi jawaban commit-reveal (atau suara terenkripsi yang dihitung di Arcium MPC), dibayar bila sesuai konsensus dan kehilangan sebagian stake bila tidak atau tidak reveal. Pihak yang tidak setuju bisa naik banding ke putaran dengan juri dan stake lebih besar.
+3. Fee verifier diambil dari bagian platform.
+
+**Batas yang jujur disebut** [Inferensi]: voting mayoritas rentan menjadi suara populer, semua bisa ikut jawaban yang paling jelas, dan insider info tidak bisa dicek rekan (memo 109). Karena itu jaringan verifier dipakai untuk pertanyaan yang buktinya bisa diperiksa publik, bukan untuk menilai mutu opini scout.
 
 **Kalau ada cadangan yang dipakai** (bagian 12 task tracker), misalnya demo di localnet, lelang commit-reveal, atau agregasi oleh operator: **sebut di video**, jangan disamarkan.
 
@@ -209,7 +232,7 @@ Wajib disebut, singkat, di video demo atau README.
 2. Veritas (operator) melihat plaintext alasan untuk menilai dan menyaringnya. TEE masuk v2.
 3. Operator memutus sengketa hoax di v1.
 4. Arcium berjalan dengan sejumlah node operator. [Fakta] Mainnet Alpha diluncurkan dengan 4 operator.
-5. Oracle hasil dijalankan operator.
+5. Oracle hasil dijalankan operator: `record_outcome` hanya menerima pembeli atau operator, dan setiap catatan menyimpan penanda tangan serta hash bukti (tampil di `/admin#oracle`). Jaringan oracle terbuka masuk v2 (§5.1).
 
 **Keterbatasan:**
 
@@ -229,11 +252,11 @@ Isinya untuk video pitch dan form submission.
 
 **Model bisnis:**
 
-- Dari setiap pembayaran pembeli: 80% untuk scout, 15% fee platform, 5% untuk tim yang opt-in (D-08).
+- Dari setiap pembayaran pembeli: 85% untuk scout, 15% fee platform; tidak ada bagian otomatis untuk tim (revisi D-08, 12 Okt).
 - **Patokan harga:**
   - [Fakta] Retro9000 membayar $100–$10.000 per proyek yang berhasil.
   - [Fakta] Metis membayar $200–$4.000 per integrasi.
-  - [Inferensi] Ilustrasi (bukan data pasar): satu Sourcing Round dengan 2 slot eksklusif @ 2.000 USDC + 3 pembeli harga rata @ 500 USDC = 5.500 USDC. Pembagiannya: 4.400 ke scout, 825 ke platform, 275 ke tim.
+  - [Inferensi] Ilustrasi (bukan data pasar): satu Sourcing Round dengan 2 slot eksklusif @ 2.000 USDC + 3 pembeli harga rata @ 500 USDC = 5.500 USDC. Pembagiannya: 4.675 ke scout, 825 ke platform.
 
 **Pembeli awal:**
 
@@ -278,12 +301,12 @@ Isinya untuk video pitch dan form submission.
 
 Cukup satu kalimat per poin di pitch.
 
-1. Validasi argumen antar-scout (desain sudah ada, ditunda dari v1).
-2. Aturan surprisingly popular, supaya minoritas yang benar tetap terlihat.
-3. Veritas di dalam TEE, sehingga operator tidak melihat plaintext.
-4. Oracle hasil lintas chain (Base, Arbitrum).
-5. Pendanaan stake lewat shielded pool.
-6. Pengadilan sengketa terdesentralisasi.
+1. **Jaringan oracle terbuka** (keputusan Dien 12 Okt, wajib disebut): deploy di Solana diperiksa otomatis oleh program; hasil subjektif dan sengketa hoax diputus verifier acak ber-stake dengan suara rahasia, hadiah dan slash menurut konsensus. Menggantikan oracle dan putusan sengketa oleh operator.
+2. Validasi argumen antar-scout (desain sudah ada, ditunda dari v1).
+3. Aturan surprisingly popular, supaya minoritas yang benar tetap terlihat.
+4. Veritas di dalam TEE, sehingga operator tidak melihat plaintext.
+5. Oracle hasil lintas chain (Base, Arbitrum), lewat jaringan verifier di poin 1.
+6. Pendanaan stake lewat shielded pool.
 7. Use case lanjutan: rekrutmen, investasi halal, riset.
 
 ---
@@ -293,6 +316,7 @@ Cukup satu kalimat per poin di pitch.
 - ❌ Logo atau nama ekosistem nyata sebagai pembeli atau pelanggan di UI demo. Menyebut mereka sebagai **target pasar** di pitch boleh.
 - ❌ Klaim traction, pengguna, atau pilot yang tidak benar-benar ada.
 - ❌ "Fully trustless", "fully private", atau "nobody can ever know". Lihat asumsi di bagian 7.
+- ❌ "Decentralized oracle" atau "anyone can verify outcomes" untuk v1. Di v1 oracle-nya operator; jaringan verifier terbuka adalah roadmap.
 - ❌ "AI detects lies" atau "AI slashes bad scouts". Veritas hanya memberi penanda.
 - ❌ "Prediction market", "betting", atau "bet on teams". Pakai "stake-backed signal" dan "refundable stake".
 - ❌ Klaim memakai verifier onchain resmi Reclaim. Yang dipakai verifikasi offchain dengan SDK resmi.
@@ -323,11 +347,11 @@ Cukup satu kalimat per poin di pitch.
   - pembeda: 20 detik;
   - bisnis + GTM + validasi: 40 detik;
   - founder: 15 detik;
-  - roadmap dan penutup: 15 detik.
+  - roadmap dan penutup: 15 detik (sebut jaringan oracle terbuka sebagai poin pertama).
 - **Demo (maksimal 3 menit):**
   - ketukan 1–4 (scout): 60 detik;
   - ketukan 5–8 (pembeli dan lelang): 70 detik;
-  - ketukan 10–11 (hasil dan klaim): 30 detik;
+  - ketukan 10–11 (hasil, panel Outcome oracle, klaim): 40 detik;
   - asumsi kepercayaan: 15 detik;
   - penutup: 5 detik.
 

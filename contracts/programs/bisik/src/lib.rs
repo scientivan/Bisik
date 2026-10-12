@@ -22,6 +22,8 @@ pub const CONFIG_SEED: &[u8] = b"config";
 pub const GROUP_SEED: &[u8] = b"group";
 pub const SOURCE_SEED: &[u8] = b"src";
 pub const BUYER_SEED: &[u8] = b"buyer";
+/// N1: per-buyer track record (separate account so `BuyerProfile` keeps its layout).
+pub const BUYER_RECORD_SEED: &[u8] = b"brec";
 pub const MARKET_SEED: &[u8] = b"market";
 pub const ESCROW_SEED: &[u8] = b"escrow";
 pub const AGG_SEED: &[u8] = b"agg";
@@ -75,7 +77,7 @@ pub mod bisik {
     // ───────────────────────────── config & identity ─────────────────────────────
 
     pub fn init_config(ctx: Context<InitConfig>, args: ConfigArgs) -> Result<()> {
-        require!(args.fee_bps as u64 + args.team_bps as u64 <= BPS, BisikError::InvalidParams);
+        require!(args.fee_bps as u64 <= BPS && args.team_bps == 0, BisikError::InvalidParams);
         let c = &mut ctx.accounts.config;
         c.admin = ctx.accounts.admin.key();
         c.operator = args.operator;
@@ -220,7 +222,10 @@ pub mod bisik {
             require!(args.submit_len >= 86_400 && args.outcome_len >= 86_400, BisikError::InvalidParams);
         }
         if args.kind == kind::AUCTION {
-            require!(ctx.accounts.creator.key() == c.operator, BisikError::Unauthorized);
+            // Auction rounds are opened by a verified buyer (replaces D-02 operator-only).
+            // The creator gets no special allocation and bids like everyone else.
+            let profile = ctx.accounts.buyer_profile.as_deref().map(|b| &**b);
+            require!(may_open_auction(profile, &ctx.accounts.creator.key()), BisikError::NotEligibleBuyer);
         } else {
             require!(args.initial_pool > 0, BisikError::InvalidParams);
         }
@@ -270,6 +275,15 @@ pub mod bisik {
             m.buyer_count = 1;
             m.winners[0] = m.creator;
             m.prices[0] = args.initial_pool;
+        }
+        {
+            let creator = ctx.accounts.creator.key();
+            let r = &mut ctx.accounts.buyer_record;
+            touch_record(r, creator, ctx.bumps.buyer_record);
+            // The exclusive creator is the market's only buyer; an auction creator joins only by bidding.
+            if args.kind == kind::EXCLUSIVE {
+                r.markets_joined = r.markets_joined.saturating_add(1);
+            }
         }
         emit!(MarketCreated { market: m.key(), id: m.id, kind: m.kind, submit_end: m.submit_end });
         Ok(())
@@ -539,6 +553,10 @@ pub mod bisik {
         b.buyer = ctx.accounts.payer.key();
         b.ceiling = ceiling;
         b.bump = ctx.bumps.bid;
+        // One Bid PDA per (market, buyer), so this counts each auction market once.
+        let r = &mut ctx.accounts.buyer_record;
+        touch_record(r, ctx.accounts.payer.key(), ctx.bumps.buyer_record);
+        r.markets_joined = r.markets_joined.saturating_add(1);
         Ok(())
     }
 
@@ -737,6 +755,14 @@ pub mod bisik {
         m.buyers[i] = buyer;
         m.pools[i] = m.flat_price;
         m.buyer_count += 1;
+        // A losing bidder that buys at the flat price was already counted by `open_bid`.
+        let bid = &ctx.accounts.bid;
+        let already_bid = bid.owner == &crate::ID && bid.data_len() > 0;
+        let r = &mut ctx.accounts.buyer_record;
+        touch_record(r, buyer, ctx.bumps.buyer_record);
+        if !already_bid {
+            r.markets_joined = r.markets_joined.saturating_add(1);
+        }
         emit!(FlatBought { market: m.key(), buyer });
         Ok(())
     }
@@ -751,7 +777,8 @@ pub mod bisik {
         Ok(())
     }
 
-    /// Team opt-in (D-09): the operator registers the team's deploy wallet after the team claims it.
+    /// With the team's consent and ownership verified, register a deploy wallet for outcome checks.
+    /// Legacy opt-in fields now indicate wallet registration only; they confer no payment rights.
     pub fn register_deploy_wallet(ctx: Context<RegisterDeployWallet>, wallet: Pubkey) -> Result<()> {
         let o = &mut ctx.accounts.option;
         o.deploy_wallet = wallet;
@@ -780,19 +807,27 @@ pub mod bisik {
         r.recorded_by = signer;
         r.at = Clock::get()?.unix_timestamp;
         r.bump = ctx.bumps.outcome;
+        // N1: every OutcomeRecord counts for the buyer it belongs to, whoever signed it.
+        let rec = &mut ctx.accounts.buyer_record;
+        touch_record(rec, m.buyers[i], ctx.bumps.buyer_record);
+        rec.outcomes_recorded = rec.outcomes_recorded.saturating_add(1);
         emit!(OutcomeRecorded { market: m.key(), buyer: r.buyer, option, kind: outcome_kind });
         Ok(())
     }
 
     /// D-05 default rule: a buyer who marked nothing gets the option with the strongest
     /// signal they bought. The operator computes it from the decrypted signal view (disclosed).
-    pub fn set_default_outcome(ctx: Context<OperatorMarket>, buyer_index: u8, option: u16) -> Result<()> {
+    pub fn set_default_outcome(ctx: Context<SetDefaultOutcome>, buyer_index: u8, option: u16) -> Result<()> {
         let m = &mut ctx.accounts.market;
         require!(m.status == status::OUTCOME && Clock::get()?.unix_timestamp >= m.outcome_end, BisikError::TooEarly);
         let i = buyer_index as usize;
         require!(i < m.buyer_count as usize && m.masks[i] == 0, BisikError::InvalidParams);
         require!(visible_mask(m, i) & (1u16 << option) != 0, BisikError::NotVisible);
         m.masks[i] = 1u16 << option;
+        // N1: the buyer did not report an outcome in time.
+        let rec = &mut ctx.accounts.buyer_record;
+        touch_record(rec, m.buyers[i], ctx.bumps.buyer_record);
+        rec.defaults_applied = rec.defaults_applied.saturating_add(1);
         Ok(())
     }
 
@@ -814,6 +849,9 @@ pub mod bisik {
         d.status = 0;
         d.bump = ctx.bumps.dispute;
         m.open_disputes += 1;
+        let rec = &mut ctx.accounts.buyer_record;
+        touch_record(rec, buyer, ctx.bumps.buyer_record);
+        rec.disputes_opened = rec.disputes_opened.saturating_add(1);
         emit!(DisputeOpened { market: m.key(), nullifier: d.nullifier });
         Ok(())
     }
@@ -825,6 +863,13 @@ pub mod bisik {
         require!(d.status == 0, BisikError::AlreadyDone);
         require!(Clock::get()?.unix_timestamp >= d.deadline || ctx.accounts.config.demo_mode, BisikError::TooEarly);
         d.status = if upheld { 1 } else { 2 };
+        let rec = &mut ctx.accounts.buyer_record;
+        touch_record(rec, d.buyer, ctx.bumps.buyer_record);
+        if upheld {
+            rec.disputes_upheld = rec.disputes_upheld.saturating_add(1);
+        } else {
+            rec.disputes_rejected = rec.disputes_rejected.saturating_add(1);
+        }
         let m = &mut ctx.accounts.market;
         m.open_disputes -= 1;
         if upheld && !ctx.accounts.position.slashed {
@@ -1007,32 +1052,10 @@ pub mod bisik {
         Ok(())
     }
 
-    /// Team share (D-08, 5%) for buyer i, paid to the deploy wallet of an opted-in successful option.
+    /// Legacy entry point retained for ABI compatibility. Team payments were removed on 12 Oct 2026.
     pub fn pay_team_share(ctx: Context<PayTeamShare>, buyer_index: u8) -> Result<()> {
-        let m = &mut ctx.accounts.market;
-        require!(m.status >= status::SETTLING, BisikError::NotReady);
-        let i = buyer_index as usize;
-        require!(i < m.buyer_count as usize && !m.team_paid[i], BisikError::AlreadyDone);
-        let o = &ctx.accounts.option;
-        require!(o.opted_in && m.masks[i] & (1u16 << o.index) != 0, BisikError::NotVisible);
-        require!(ctx.accounts.team_token.owner == o.deploy_wallet, BisikError::Unauthorized);
-        let amount = m.pools[i] * ctx.accounts.config.team_bps as u64 / BPS;
-        m.team_paid[i] = true;
-        let id = m.id.to_le_bytes();
-        let seeds: &[&[u8]] = &[MARKET_SEED, &id, &[m.bump]];
-        token::transfer(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.key(),
-                Transfer {
-                    from: ctx.accounts.escrow.to_account_info(),
-                    to: ctx.accounts.team_token.to_account_info(),
-                    authority: m.to_account_info(),
-                },
-                &[seeds],
-            ),
-            amount,
-        )?;
-        Ok(())
+        let _ = (ctx, buyer_index);
+        err!(BisikError::TeamShareRemoved)
     }
 
     // ───────────────────────────── D4: signals to the buyer's key ─────────────────────────────
@@ -1262,18 +1285,122 @@ pub fn visible_mask(m: &Market, i: usize) -> u16 {
     }
 }
 
-/// Scout share per buyer is 80%, or 85% when no opted-in team is among that buyer's
-/// successful options (the 5% team share then returns to scouts, D-08).
+/// Auction rounds may be opened only by a verified buyer whose profile belongs to the creator.
+pub fn may_open_auction(profile: Option<&BuyerProfile>, creator: &Pubkey) -> bool {
+    matches!(profile, Some(bp) if bp.verified && bp.authority == *creator)
+}
+
+/// Fill the identity fields of a `BuyerRecord` the first time it is touched (`init_if_needed`).
+pub fn touch_record(r: &mut BuyerRecord, buyer: Pubkey, bump: u8) {
+    if r.buyer == Pubkey::default() {
+        r.buyer = buyer;
+        r.bump = bump;
+    }
+}
+
+/// Scouts receive 85% regardless of deploy-wallet registration.
+/// A legacy team payment already sent before upgrade leaves only 80% available;
+/// preserve that accounting so upgrading cannot pay out the same 5% twice.
 pub fn payout_for(m: &Market, hits: &[bool; 4], weight: u64) -> u64 {
     let mut total: u128 = 0;
     for b in 0..m.buyer_count as usize {
         if !hits[b] || m.denoms[b] == 0 {
             continue;
         }
-        let scout_bps: u128 = if m.masks[b] & m.opted_mask != 0 { 8_000 } else { 8_500 };
+        let scout_bps: u128 = if m.team_paid[b] { 8_000 } else { 8_500 };
         total += m.pools[b] as u128 * scout_bps * weight as u128 / (BPS as u128 * m.denoms[b] as u128);
     }
     total as u64
+}
+
+#[cfg(test)]
+mod buyer_record_tests {
+    use super::*;
+
+    fn profile(authority: Pubkey, verified: bool) -> BuyerProfile {
+        BuyerProfile { authority, pseudonym_hash: [0; 32], verified, bump: 255 }
+    }
+
+    #[test]
+    fn auction_requires_verified_profile_of_creator() {
+        let creator = Pubkey::new_unique();
+        let other = Pubkey::new_unique();
+        assert!(may_open_auction(Some(&profile(creator, true)), &creator));
+        assert!(!may_open_auction(Some(&profile(creator, false)), &creator));
+        assert!(!may_open_auction(Some(&profile(other, true)), &creator));
+        assert!(!may_open_auction(None, &creator));
+    }
+
+    #[test]
+    fn record_identity_is_set_once() {
+        let bytes = vec![0u8; BuyerRecord::INIT_SPACE];
+        let mut r = BuyerRecord::deserialize(&mut bytes.as_slice()).unwrap();
+        let a = Pubkey::new_unique();
+        touch_record(&mut r, a, 254);
+        r.markets_joined += 1;
+        touch_record(&mut r, Pubkey::new_unique(), 1);
+        assert_eq!((r.buyer, r.bump, r.markets_joined), (a, 254, 1));
+    }
+
+    #[test]
+    fn existing_account_layouts_are_unchanged() {
+        // Sizes of the accounts already live on devnet (12 Oct build). A change here
+        // would break deserialization of existing accounts.
+        assert_eq!(BuyerProfile::INIT_SPACE, 66);
+        assert_eq!(Market::INIT_SPACE, 516);
+        assert_eq!(OutcomeRecord::INIT_SPACE, 32 + 32 + 2 + 1 + 32 + 32 + 8 + 1);
+        assert_eq!(Dispute::INIT_SPACE, 32 + 32 + 32 + 32 + 32 + 8 + 8 + 1 + 1);
+        assert_eq!(Bid::INIT_SPACE, 32 + 32 + 8 + 1 + 1 + 1);
+        assert_eq!(BuyerRecord::INIT_SPACE, 32 + 6 * 4 + 1);
+    }
+}
+
+#[cfg(test)]
+mod payout_tests {
+    use super::*;
+
+    fn market() -> Market {
+        let bytes = vec![0u8; Market::INIT_SPACE];
+        let mut m = Market::deserialize(&mut bytes.as_slice()).unwrap();
+        m.buyer_count = 2;
+        m.pools = [200_000_000, 100_000_000, 0, 0];
+        m.denoms = [150, 100, 0, 0];
+        m.masks = [1, 2, 0, 0];
+        m
+    }
+
+    #[test]
+    fn registered_wallet_does_not_reduce_scout_rewards() {
+        let mut m = market();
+        let hits = [true, true, false, false];
+        let expected = payout_for(&m, &hits, 50);
+        m.opted_mask = 3;
+        assert_eq!(payout_for(&m, &hits, 50), expected);
+        assert_eq!(expected, 99_166_666);
+        // Across all eligible positions, scouts and platform consume the pool
+        // (apart from integer rounding); there is no reserved team share.
+        let scout_total = payout_for(&m, &hits, 50)
+            + payout_for(&m, &[true, false, false, false], 100)
+            + payout_for(&m, &[false, true, false, false], 50);
+        assert_eq!(scout_total + 45_000_000, 299_999_999);
+    }
+
+    #[test]
+    fn legacy_team_transfer_is_not_spent_twice() {
+        let mut m = market();
+        m.team_paid[0] = true;
+        assert_eq!(payout_for(&m, &[true, false, false, false], 150), 160_000_000);
+        assert_eq!(160_000_000 + 30_000_000 + 10_000_000, m.pools[0]);
+        assert_eq!(payout_for(&m, &[false, true, false, false], 100), 85_000_000);
+    }
+
+    #[test]
+    fn unrewarded_positions_and_empty_denominators_receive_zero() {
+        let mut m = market();
+        assert_eq!(payout_for(&m, &[false; 4], 100), 0);
+        m.denoms = [0; 4];
+        assert_eq!(payout_for(&m, &[true; 4], 100), 0);
+    }
 }
 
 // ───────────────────────────── state ─────────────────────────────
@@ -1323,6 +1450,26 @@ pub struct BuyerProfile {
     pub authority: Pubkey,
     pub pseudonym_hash: [u8; 32],
     pub verified: bool,
+    pub bump: u8,
+}
+
+/// N1: onchain buyer track record. A separate PDA (`["brec", buyer]`) so the existing
+/// `BuyerProfile` layout stays unchanged. Counters only cover activity after the
+/// 13 Oct 2026 upgrade; earlier activity is reconstructed offchain from existing accounts.
+#[account]
+#[derive(InitSpace)]
+pub struct BuyerRecord {
+    pub buyer: Pubkey,
+    /// Markets the buyer put money into: exclusive creation, an auction bid, or a flat
+    /// purchase without an earlier bid in the same market.
+    pub markets_joined: u32,
+    /// OutcomeRecords written for this buyer (by the buyer or by the operator oracle).
+    pub outcomes_recorded: u32,
+    /// Times the D-05 default outcome was applied because the buyer reported nothing.
+    pub defaults_applied: u32,
+    pub disputes_opened: u32,
+    pub disputes_upheld: u32,
+    pub disputes_rejected: u32,
     pub bump: u8,
 }
 
@@ -1645,6 +1792,11 @@ pub struct CreateMarket<'info> {
     pub creator_token: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
+    /// Required for auction rounds: the creator must be a verified buyer.
+    #[account(seeds = [BUYER_SEED, creator.key().as_ref()], bump = buyer_profile.bump)]
+    pub buyer_profile: Option<Box<Account<'info, BuyerProfile>>>,
+    #[account(init_if_needed, payer = creator, space = 8 + BuyerRecord::INIT_SPACE, seeds = [BUYER_RECORD_SEED, creator.key().as_ref()], bump)]
+    pub buyer_record: Box<Account<'info, BuyerRecord>>,
 }
 
 #[derive(Accounts)]
@@ -1687,12 +1839,18 @@ pub struct MarketMut<'info> {
 }
 
 #[derive(Accounts)]
-pub struct OperatorMarket<'info> {
+#[instruction(buyer_index: u8)]
+pub struct SetDefaultOutcome<'info> {
+    #[account(mut)]
     pub operator: Signer<'info>,
     #[account(seeds = [CONFIG_SEED], bump = config.bump, constraint = config.operator == operator.key() @ BisikError::Unauthorized)]
     pub config: Box<Account<'info, Config>>,
     #[account(mut)]
     pub market: Box<Account<'info, Market>>,
+    /// N1 record of `market.buyers[buyer_index]` (index range is checked in the handler).
+    #[account(init_if_needed, payer = operator, space = 8 + BuyerRecord::INIT_SPACE, seeds = [BUYER_RECORD_SEED, market.buyers[buyer_index as usize % MAX_BUYERS].as_ref()], bump)]
+    pub buyer_record: Box<Account<'info, BuyerRecord>>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -1712,6 +1870,8 @@ pub struct OpenBid<'info> {
     pub escrow: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
+    #[account(init_if_needed, payer = payer, space = 8 + BuyerRecord::INIT_SPACE, seeds = [BUYER_RECORD_SEED, payer.key().as_ref()], bump)]
+    pub buyer_record: Box<Account<'info, BuyerRecord>>,
 }
 
 #[derive(Accounts)]
@@ -1750,6 +1910,13 @@ pub struct BuyFlat<'info> {
     #[account(mut, seeds = [ESCROW_SEED, market.key().as_ref()], bump = market.escrow_bump)]
     pub escrow: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
+    /// CHECK: read-only probe of this buyer's Bid PDA in the market; it may not exist.
+    /// Only its owner and length are read, to avoid counting the market twice.
+    #[account(seeds = [BID_SEED, market.key().as_ref(), payer.key().as_ref()], bump)]
+    pub bid: UncheckedAccount<'info>,
+    #[account(init_if_needed, payer = payer, space = 8 + BuyerRecord::INIT_SPACE, seeds = [BUYER_RECORD_SEED, payer.key().as_ref()], bump)]
+    pub buyer_record: Box<Account<'info, BuyerRecord>>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -1775,6 +1942,9 @@ pub struct RecordOutcome<'info> {
     #[account(init, payer = signer, space = 8 + OutcomeRecord::INIT_SPACE, seeds = [OUTCOME_SEED, market.key().as_ref(), &[buyer_index], &option.to_le_bytes()], bump)]
     pub outcome: Box<Account<'info, OutcomeRecord>>,
     pub system_program: Program<'info, System>,
+    /// N1 record of `market.buyers[buyer_index]` (index range is checked in the handler).
+    #[account(init_if_needed, payer = signer, space = 8 + BuyerRecord::INIT_SPACE, seeds = [BUYER_RECORD_SEED, market.buyers[buyer_index as usize % MAX_BUYERS].as_ref()], bump)]
+    pub buyer_record: Box<Account<'info, BuyerRecord>>,
 }
 
 #[derive(Accounts)]
@@ -1788,10 +1958,13 @@ pub struct OpenDispute<'info> {
     #[account(init, payer = buyer, space = 8 + Dispute::INIT_SPACE, seeds = [DISPUTE_SEED, market.key().as_ref(), &position.nullifier], bump)]
     pub dispute: Box<Account<'info, Dispute>>,
     pub system_program: Program<'info, System>,
+    #[account(init_if_needed, payer = buyer, space = 8 + BuyerRecord::INIT_SPACE, seeds = [BUYER_RECORD_SEED, buyer.key().as_ref()], bump)]
+    pub buyer_record: Box<Account<'info, BuyerRecord>>,
 }
 
 #[derive(Accounts)]
 pub struct ResolveDispute<'info> {
+    #[account(mut)]
     pub operator: Signer<'info>,
     #[account(seeds = [CONFIG_SEED], bump = config.bump, constraint = config.operator == operator.key() @ BisikError::Unauthorized)]
     pub config: Box<Account<'info, Config>>,
@@ -1806,6 +1979,9 @@ pub struct ResolveDispute<'info> {
     #[account(mut, address = config.charity)]
     pub charity_token: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
+    #[account(init_if_needed, payer = operator, space = 8 + BuyerRecord::INIT_SPACE, seeds = [BUYER_RECORD_SEED, dispute.buyer.as_ref()], bump)]
+    pub buyer_record: Box<Account<'info, BuyerRecord>>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -1938,6 +2114,8 @@ pub enum BisikError {
     AlreadyClaimed,
     #[msg("Position slashed")]
     PositionSlashed,
+    #[msg("Automatic team payments have been removed")]
+    TeamShareRemoved,
 }
 
 // ---- generated Arcium account structs (do not hand-edit the shape; regenerate) ----

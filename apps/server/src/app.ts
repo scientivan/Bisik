@@ -1,3 +1,4 @@
+import { streamSSE } from "hono/streaming";
 /**
  * Bisik API (task-tracker 6.5). Endpoints are mounted under /v1.
  * Operator trust assumptions are listed in the README (verifier, Veritas, disputes, oracle).
@@ -16,6 +17,7 @@ import { seal, open } from "./sealed.js";
 import { addMember, leaves, rootOf } from "./groups.js";
 import { newNonce, verifyLogin, verifyToken } from "./auth.js";
 import { verifyScoutProofs, createSession, pollSession, VerifyError } from "./reclaim.js";
+import { registerReputationRoutes, solanaReputationSource } from "./reputation.js";
 
 export interface Deps {
   db: DB;
@@ -170,28 +172,117 @@ export function createApp(d: Deps) {
     question: (d.db.prepare("SELECT question FROM market_questions WHERE market_id=?").get(Number(m.id)) as any)?.question ?? null,
     preview: m.status >= 2 ? { backed: m.preview[0], weak: m.preview[1], medium: m.preview[2], strong: m.preview[3] } : null,
   });
-  const MARKET_TTL_MS = 10_000;
-  let marketCache: { at: number; data: any[] } | null = null;
+  /**
+   * F4 preview: market-wide tier mix of staked calls (tier 0 = 50–299, 1 = 300–999, 2 = 1,000+ contributions).
+   * Never per option. Counts below TIER_K are reported as null ("fewer than 5"); when exactly one tier is
+   * suppressed, the next smallest non-zero tier is coarsened to "many" ("5 or more") so the hidden count
+   * cannot be derived from the public call total. Honest limit: each position's tier is plaintext onchain (the stake's group),
+   * so this is display hygiene, not a secrecy guarantee; the anonymity set is the tier group (k_min).
+   * Cached per market until its position count changes, because the position scan is an account scan.
+   */
+  const TIER_K = 5;
+  type TierCount = number | null | "many";
+  const tierCache = new Map<number, { count: number; counts: TierCount[] | null }>();
+  const suppressTiers = (raw: number[]) => {
+    const out: TierCount[] = raw.map((n) => (n > 0 && n < TIER_K ? null : n));
+    if (out.filter((n) => n === null).length === 1) {
+      const next = raw
+        .map((n, i) => ({ n, i }))
+        .filter(({ n, i }) => n > 0 && out[i] !== null)
+        .sort((a, b) => a.n - b.n)[0];
+      if (next) out[next.i] = "many";
+    }
+    return out;
+  };
+  async function tierSupport(m: any) {
+    const id = Number(m.id),
+      count = Number(m.positionCount ?? 0);
+    if (!count) return { k: TIER_K, counts: [0, 0, 0] };
+    if (!d.chain?.fetchPositions) return null;
+    const hit = tierCache.get(id);
+    if (hit && hit.count === count) return hit.counts && { k: TIER_K, counts: hit.counts };
+    try {
+      const raw = [0, 0, 0];
+      for (const p of await d.chain.fetchPositions(id)) if (p.tier >= 0 && p.tier <= 2) raw[p.tier]++;
+      const counts = suppressTiers(raw);
+      tierCache.set(id, { count, counts });
+      return { k: TIER_K, counts };
+    } catch {
+      return hit?.counts ? { k: TIER_K, counts: hit.counts } : null; // scan RPC failed: keep the last good mix
+    }
+  }
+  const withTiers = async (m: any) => ({ ...marketSummary(m), tierSupport: await tierSupport(m) });
+  /**
+   * Event-driven market cache. Responses are served from memory. The cache is rebuilt only when a
+   * confirmed transaction touches the program (log subscription), with a slow safety refresh in case
+   * the websocket drops. Every rebuild bumps `dataVersion`, which browsers watch over /v1/events.
+   */
+  const SAFETY_REFRESH_MS = 120_000;
+  let marketCache: { at: number; data: any[]; list: any[] } | null = null;
+  let refreshing: Promise<void> | null = null;
+  let dataVersion = 1;
+  const detailCache = new Map<number, { version: number; data: any }>();
+  const listeners = new Set<(v: number) => void>();
+  const bump = () => {
+    dataVersion++;
+    detailCache.clear();
+    for (const l of listeners) l(dataVersion);
+  };
+  const refreshMarkets = () =>
+    (refreshing ??= (async () => {
+      try {
+        const all = await d.chain!.fetchMarkets();
+        // One market at a time: parallel account scans trip public RPC rate limits.
+        const list: any[] = [];
+        for (const m of all) list.push(await withTiers(m));
+        list.sort((a, b) => b.id - a.id);
+        const changed = !marketCache || JSON.stringify(marketCache.list) !== JSON.stringify(list);
+        marketCache = { at: Date.now(), data: all, list };
+        if (changed) bump();
+      } finally {
+        refreshing = null;
+      }
+    })());
+  let watching = false;
+  let debounce: ReturnType<typeof setTimeout> | null = null;
+  const watch = () => {
+    if (watching || !d.chain) return;
+    watching = true;
+    d.chain.onProgramChange?.(() => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        detailCache.clear();
+        void refreshMarkets().catch(() => {});
+      }, 800);
+    });
+    const t = setInterval(() => void refreshMarkets().catch(() => {}), SAFETY_REFRESH_MS);
+    (t as any).unref?.();
+  };
   app.get("/v1/markets", async (c) => {
     if (!d.chain) return c.json({ error: "chain not configured" }, 503);
-    // Short cache: the list changes only when the keeper moves a market. On RPC failure, serve the last good list.
-    let all: any[];
-    if (marketCache && Date.now() - marketCache.at < MARKET_TTL_MS) all = marketCache.data;
-    else {
-      try {
-        all = await d.chain.fetchMarkets();
-        marketCache = { at: Date.now(), data: all };
-      } catch (e) {
-        if (!marketCache) throw e;
-        all = marketCache.data;
-      }
-    }
+    watch();
+    if (!marketCache) await refreshMarkets();
     const status = c.req.query("status");
-    const list = all
-      .map(marketSummary)
-      .filter((m) => !status || m.status === status)
-      .sort((a, b) => b.id - a.id);
-    return c.json({ markets: list });
+    const list = marketCache!.list.filter((m) => !status || m.status === status);
+    c.header("X-Data-Version", String(dataVersion));
+    return c.json({ markets: list, version: dataVersion });
+  });
+  app.get("/v1/version", (c) => c.json({ version: dataVersion }));
+  /** Server-sent events: one message per data change, so pages refetch only when something changed. */
+  app.get("/v1/events", (c) => {
+    watch();
+    return streamSSE(c, async (stream) => {
+      let open = true;
+      const push = (v: number) => void stream.writeSSE({ event: "version", data: String(v) }).catch(() => (open = false));
+      listeners.add(push);
+      stream.onAbort(() => { open = false; listeners.delete(push); });
+      await stream.writeSSE({ event: "version", data: String(dataVersion) });
+      while (open) {
+        await stream.sleep(25_000);
+        if (open) await stream.writeSSE({ event: "ping", data: "" }).catch(() => (open = false));
+      }
+      listeners.delete(push);
+    });
   });
   /**
    * Publish a market's question text. Only its keccak hash is onchain; anyone may publish the text,
@@ -206,19 +297,24 @@ export function createApp(d: Deps) {
     if (!m) return c.json({ error: "not found" }, 404);
     if (toHex(keccak(utf8(question))) !== toHex(Uint8Array.from(m.questionHash))) return c.json({ error: "question does not match the onchain hash" }, 400);
     d.db.prepare("INSERT OR REPLACE INTO market_questions (market_id, question, created_at) VALUES (?,?,?)").run(id, question, Date.now());
-    marketCache = null;
+    if (marketCache) await refreshMarkets().catch(() => {});
     return c.json({ ok: true });
   });
   app.get("/v1/markets/:id", async (c) => {
     if (!d.chain) return c.json({ error: "chain not configured" }, 503);
     const id = Number(c.req.param("id"));
+    watch();
+    const hit = detailCache.get(id);
+    if (hit && hit.version === dataVersion) return c.json(hit.data);
     const m = await d.chain.fetchMarket(id);
     if (!m) return c.json({ error: "not found" }, 404);
     // Public option list: index and category only. The team behind each option stays private (no teamRef).
     const entries = await Promise.all(Array.from({ length: m.optionCount }, (_, i) => d.chain!.fetchOption(id, i)));
     const options = entries.flatMap((o, i) => (o ? [{ index: i, category: o.category, optedIn: !!o.optedIn }] : []));
     const teamRefsRegistered = (d.db.prepare("SELECT COUNT(*) AS n FROM team_refs WHERE market_id=?").get(id) as any).n;
-    return c.json({ ...marketSummary(m), options, teamRefsRegistered });
+    const data = { ...(await withTiers(m)), options, teamRefsRegistered, version: dataVersion };
+    detailCache.set(id, { version: dataVersion, data });
+    return c.json(data);
   });
 
   // ── buyer auth ──
@@ -395,7 +491,7 @@ export function createApp(d: Deps) {
     const who = authed(c);
     if (who !== d.chain.operator.toBase58() && m.buyers[Number(buyerIndex)]?.toBase58() !== who)
       return c.json({ error: "this buyer allocation belongs to another wallet" }, 403);
-    if (!opt.optedIn) return c.json({ found: false, reason: "team has not registered a deploy wallet (opt-in)" });
+    if (!opt.optedIn) return c.json({ found: false, reason: "deploy wallet not registered for outcome verification" });
     const since = Number(m.outcomeEnd) - Number(m.outcomeLen);
     const deploys = await d.chain.findDeploys(opt.deployWallet, since);
     if (!deploys.length) return c.json({ found: false });
@@ -440,6 +536,44 @@ export function createApp(d: Deps) {
     d.db.prepare("UPDATE disputes SET response=? WHERE id=?").run(seal(d.cfg.dataKey, String(response)), c.req.param("id"));
     return c.json({ ok: true });
   });
+  /**
+   * Public per-market list so a scout can find disputes on their own calls without typing an ID.
+   * It returns only the dispute ID and the disputed nullifier. The nullifier is already public
+   * onchain (the Dispute account is seeded by market + nullifier), so the scout filters locally
+   * and the server never learns which positions the caller holds. Claim text and evidence need
+   * an ownership proof (see /view). `openOnchain` is the market's open dispute counter.
+   */
+  app.get("/v1/disputes/open/:marketId", async (c) => {
+    const marketId = Number(c.req.param("marketId"));
+    if (!Number.isSafeInteger(marketId) || marketId < 0) return c.json({ error: "invalid market id" }, 400);
+    const rows = d.db.prepare("SELECT id, nullifier, created_at FROM disputes WHERE market_id=? AND status='OPEN' ORDER BY created_at DESC").all(marketId) as any[];
+    let openOnchain: number | null = null;
+    if (d.chain) {
+      try {
+        const m = await d.chain.fetchMarket(marketId);
+        openOnchain = m ? Number(m.openDisputes ?? 0) : null;
+      } catch { /* RPC failure: the list still works, the counter is unknown */ }
+    }
+    return c.json({ openOnchain, disputes: rows.map((r) => ({ id: r.id, nullifier: String(r.nullifier).toLowerCase(), createdAt: r.created_at })) });
+  });
+  /** The disputed position's owner reads the claim and the buyer's evidence with a fresh ownership proof. */
+  app.post("/v1/disputes/:id/view", async (c) => {
+    const body = await c.req.json();
+    const row = d.db.prepare("SELECT * FROM disputes WHERE id=?").get(c.req.param("id")) as any;
+    if (!row) return c.json({ error: "dispute not found" }, 404);
+    if (row.market_id !== body.marketId || String(row.nullifier).toLowerCase() !== String(body.nullifier).toLowerCase() ||
+        !(await ownsResponse(body, "dispute-view", row.id, null))) return c.json({ error: "valid position ownership proof required" }, 403);
+    const claim = (d.db.prepare("SELECT claims FROM reasons WHERE market_id=?").all(row.market_id) as any[])
+      .flatMap((r) => JSON.parse(r.claims))
+      .find((cl: any) => cl.id === row.claim_id);
+    return c.json({
+      id: row.id,
+      claimText: claim?.text ?? null,
+      evidence: open(d.cfg.dataKey, row.evidence),
+      response: row.response ? open(d.cfg.dataKey, row.response) : null,
+      createdAt: row.created_at,
+    });
+  });
 
   // ── operator ──
   function isOperator(c: any) {
@@ -476,6 +610,9 @@ export function createApp(d: Deps) {
     const rows = d.db.prepare("SELECT * FROM disputes ORDER BY created_at DESC").all() as any[];
     return c.json(rows.map((r) => ({ ...r, evidence: open(d.cfg.dataKey, r.evidence), response: r.response ? open(d.cfg.dataKey, r.response) : null })));
   });
+
+  // ── reputation epoch view (D6/F10): public data only, see reputation.ts ──
+  registerReputationRoutes(app, d.chain ? solanaReputationSource(process.env.SOLANA_RPC_URL ?? "http://127.0.0.1:8899") : null);
 
   return app;
 }

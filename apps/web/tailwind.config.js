@@ -1,10 +1,10 @@
 export default {
  content:['./index.html','./src/**/*.{ts,tsx}'],
  theme:{extend:{
- colors:{bone:'#F3F2EC',sheet:'#FBFAF6',frame:'#E8E7DF',rule:'#DCDBD2','rule-soft':'#E6E5DD','grid-line':'#E6E5DC',ink:'#111318','ink-soft':'#2B2E36','hatch-light':'#C9C8BF',ultramarine:'#2A2FD0','ultramarine-deep':'#1B1F96','ultramarine-mid':'#6E72E6','ultramarine-pale':'#B9BCF3','on-ultramarine':'#E9EAFB',amber:'#FFB547','dark-row':'#1E2129'},
- borderRadius:{pill:'999px',frame:'18px',panel:'12px',control:'12px',row:'9px',bar:'6px'},
- spacing:{'frame-inset':'8px',panel:'18px',card:'24px',section:'120px',gutter:'32px'},
- fontFamily:{sans:["-apple-system","BlinkMacSystemFont","SF Pro Display","SF Pro Text","Inter","Helvetica Neue","sans-serif"]},
- fontSize:{display:['80px',{lineHeight:'.98',letterSpacing:'-.04em',fontWeight:'700'}],headline:['52px',{lineHeight:'1.02',letterSpacing:'-.035em',fontWeight:'700'}],title:['24px',{lineHeight:'1.2',letterSpacing:'-.02em',fontWeight:'700'}],body:['17px',{lineHeight:'1.5',fontWeight:'500'}],label:['14px',{lineHeight:'1.3',fontWeight:'700'}],numeral:['76px',{lineHeight:'.9',letterSpacing:'-.045em',fontWeight:'800'}]}
+ colors:{bone:'#F7F7F7',sheet:'#FFFFFF',frame:'#EDEDED',rule:'#D9D9D9','rule-soft':'#E5E5E5',ink:'#0F0F0F','ink-soft':'#555555','hatch-light':'#A9A9A9',ultramarine:'#1E1E1E','ultramarine-deep':'#1E1E1E','ultramarine-mid':'#777777','ultramarine-pale':'#BBA9F5','on-ultramarine':'#F7F7F7',amber:'#FFB547','dark-row':'#282828'},
+ borderRadius:{pill:'8px',frame:'28px',panel:'24px',control:'16px',row:'12px',bar:'6px'},
+ spacing:{'frame-inset':'0px',panel:'32px',card:'30px',section:'160px',gutter:'64px'},
+ fontFamily:{sans:["DieGrotesk","Arial","sans-serif"],data:["ABCDiatype","Arial","sans-serif"]},
+ fontSize:{display:['108px',{lineHeight:'1.02',letterSpacing:'-.04em',fontWeight:'400'}],headline:['64px',{lineHeight:'1.06',letterSpacing:'-.03em',fontWeight:'400'}],title:['28px',{lineHeight:'1.15',letterSpacing:'-.02em',fontWeight:'400'}],body:['18px',{lineHeight:'1.5',fontWeight:'400'}],label:['14px',{lineHeight:'1.3',fontWeight:'400'}],numeral:['88px',{lineHeight:'1',letterSpacing:'-.04em',fontWeight:'400'}]}
  }},plugins:[]
 };

@@ -5,7 +5,8 @@ import { api } from "../lib/api";
 import { P, TOKEN_PROGRAM_ID, send, tokenAccount } from "../lib/chain";
 import { fromHex } from "@bisik/shared";
 import { useAction } from "../lib/hooks";
-import { Feedback, Frame, Note, PageTitle, Pill } from "../components/ui";
+import { Feedback, Frame, Note, PageTitle, Pill, WalletActionButton } from "../components/ui";
+import { OutcomeOracle } from "../components/outcome-oracle";
 export default function Admin() {
   const wallet = useWallet(),
     action = useAction();
@@ -57,7 +58,7 @@ export default function Admin() {
                   onChange={(e) => setLabel(e.target.value)}
                 />
               </label>
-              <button
+              <WalletActionButton
                 className="button"
                 disabled={!allowed || !!action.busy || !buyer.trim()}
                 onClick={() =>
@@ -73,13 +74,13 @@ export default function Admin() {
                 }
               >
                 Verify buyer
-              </button>
+              </WalletActionButton>
             </div>
           </Frame>
           <Frame>
             <div className="stack">
-              <h3>Dispute evidence</h3>
-              <button
+              <h3 id="disputes">Dispute evidence</h3>
+              <WalletActionButton
                 className="button outline"
                 disabled={!allowed || !!action.busy}
                 onClick={() =>
@@ -117,7 +118,7 @@ export default function Admin() {
                 }
               >
                 Load disputes
-              </button>
+              </WalletActionButton>
               {disputes.length === 0 && <p>No disputes loaded.</p>}
               {disputes.map((d) => (
                 <div className="note" key={d.id}>
@@ -131,7 +132,7 @@ export default function Admin() {
                   </p>
                   <div className="row">
                     {[false, true].map((upheld) => (
-                      <button
+                      <WalletActionButton
                         className={`button ${upheld ? "ink" : "outline"} small`}
                         key={String(upheld)}
                         disabled={
@@ -145,6 +146,8 @@ export default function Admin() {
                             async () => {
                               const n = fromHex(d.nullifier),
                                 m = P.market(d.market_id),
+                                // N1: the dispute's buyer gets the upheld/rejected count.
+                                disputeAcct: any = await wallet.program.account.dispute.fetch(P.dispute(m, n)),
                                 ixs: any[] = [],
                                 charityToken = await tokenAccount(
                                   wallet.provider,
@@ -163,6 +166,7 @@ export default function Admin() {
                                     escrow: P.escrow(m),
                                     charityToken,
                                     tokenProgram: TOKEN_PROGRAM_ID,
+                                    buyerRecord: P.buyerRecord(disputeAcct.buyer),
                                   })
                                   .instruction(),
                               );
@@ -183,7 +187,7 @@ export default function Admin() {
                         }
                       >
                         {upheld ? "Uphold proven hoax" : "Reject dispute"}
-                      </button>
+                      </WalletActionButton>
                     ))}
                   </div>
                 </div>
@@ -195,7 +199,7 @@ export default function Admin() {
         <aside className="stack">
           <Frame>
             <div className="stack">
-              <h3>Market maintenance</h3>
+              <h3 id="maintenance">Market maintenance</h3>
               <label className="field">
                 <span>Market ID</span>
                 <input
@@ -204,7 +208,7 @@ export default function Admin() {
                   onChange={(e) => setMarketId(e.target.value)}
                 />
               </label>
-              <button
+              <WalletActionButton
                 className="button outline"
                 disabled={!allowed || !!action.busy || !/^\d+$/.test(marketId)}
                 onClick={() =>
@@ -222,8 +226,8 @@ export default function Admin() {
                 }
               >
                 Close expired submissions
-              </button>
-              <button
+              </WalletActionButton>
+              <WalletActionButton
                 className="button outline"
                 disabled={!allowed || !!action.busy || !/^\d+$/.test(marketId)}
                 onClick={() =>
@@ -238,8 +242,8 @@ export default function Admin() {
                 }
               >
                 Generate summaries
-              </button>
-              <button
+              </WalletActionButton>
+              <WalletActionButton
                 className="button outline"
                 disabled={!allowed || !!action.busy}
                 onClick={() =>
@@ -257,7 +261,7 @@ export default function Admin() {
                 }
               >
                 Rotate eligible epoch
-              </button>
+              </WalletActionButton>
               <Note title="Keeper runs as a service">
                 Lifecycle transitions are driven by the keeper. There is no API
                 to start or stop its process from this console.
@@ -268,7 +272,12 @@ export default function Admin() {
         <aside className="stack">
           <Frame>
             <div className="stack">
-              <h3>Register a team’s deploy wallet</h3>
+              <h3 id="deploy-wallet">Register a deploy wallet for outcome verification</h3>
+              <p>
+                Request the team’s consent and confirm wallet ownership when a
+                buyer needs deployment evidence. Registration gives the team no
+                share of buyer payments. Scouts can propose teams without registration.
+              </p>
               <label className="field">
                 <span>Option index</span>
                 <input
@@ -284,7 +293,7 @@ export default function Admin() {
                   onChange={(e) => setDeploy(e.target.value)}
                 />
               </label>
-              <button
+              <WalletActionButton
                 className="button"
                 disabled={
                   !allowed ||
@@ -294,7 +303,7 @@ export default function Admin() {
                   !deploy.trim()
                 }
                 onClick={() =>
-                  action.run("Registering an opted-in team", async () => {
+                  action.run("Registering a wallet for outcome verification", async () => {
                     const m = P.market(Number(marketId)),
                       ix = await wallet.program.methods
                         .registerDeployWallet(new PublicKey(deploy))
@@ -310,8 +319,8 @@ export default function Admin() {
                   })
                 }
               >
-                Register opt-in
-              </button>
+                Register deploy wallet
+              </WalletActionButton>
             </div>
           </Frame>
           <Note dark title="Operator trust in v1">
@@ -321,6 +330,7 @@ export default function Admin() {
           </Note>
         </aside>
       </div>
+      <OutcomeOracle operator={cfg?.operator?.toBase58?.() ?? null} allowed={allowed} />
     </>
   );
 }

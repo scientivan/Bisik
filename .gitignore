@@ -47,3 +47,6 @@ scripts/.demo/
 apps/server/data/
 .impeccable/
 Bisik — Sonogram.html
+
+# Local audits and deployment reports
+tmp/

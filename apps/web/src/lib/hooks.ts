@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type Market } from "./api";
+import { type Market } from "./api";
+import { cachedApi, cachedValue, useDataVersion } from "./live";
 export function useMarket(id: string | undefined) {
-  const [market, setMarket] = useState<Market | null>(null),
+  const path = `/markets/${id}`;
+  const version = useDataVersion();
+  const [market, setMarket] = useState<Market | null>(() => (id ? cachedValue<Market>(path) ?? null : null)),
     [error, setError] = useState(""),
-    [loading, setLoading] = useState(true);
+    [loading, setLoading] = useState(() => !(id && cachedValue(path)));
   const refresh = useCallback(async () => {
     try {
-      const m = await api<Market>(`/markets/${id}`);
+      const m = await cachedApi<Market>(path);
       setMarket(m);
       setError("");
     } catch (e) {
@@ -14,18 +17,21 @@ export function useMarket(id: string | undefined) {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [path]);
+  // Show the remembered copy at once when the market changes, then refresh.
   useEffect(() => {
-    setMarket(null);
+    const hit = id ? cachedValue<Market>(path) ?? null : null;
+    setMarket(hit);
+    setLoading(!!id && !hit);
+  }, [id, path]);
+  // Refetch on mount and whenever onchain data changes; no timer polling.
+  useEffect(() => {
     if (!id) {
       setLoading(false);
       return;
     }
-    setLoading(true);
     void refresh();
-    const t = setInterval(() => void refresh(), 15000);
-    return () => clearInterval(t);
-  }, [refresh, id]);
+  }, [refresh, id, version]);
   return { market, error, loading, refresh };
 }
 export function useAction() {

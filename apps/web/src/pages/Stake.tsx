@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   fetchMxeKey,
   encryptStakeSecrets,
@@ -20,6 +20,8 @@ import { amount, category, parseUsdc } from "../lib/amounts";
 import { read, rememberPosition, type Scout } from "../lib/storage";
 import { useMarket, useAction } from "../lib/hooks";
 import {
+  WalletActionButton,
+  Icon,
   Feedback,
   Frame,
   Note,
@@ -46,6 +48,10 @@ export default function Stake() {
     wallet = useWallet(),
     action = useAction();
   const scout = read<Scout | null>("scout", null);
+  const verified = !!scout && scout.tier !== undefined && scout.epoch !== undefined;
+  const navigate = useNavigate();
+  // Unverified scouts are sent to verification at the moment they try a scout-only action.
+  const toVerify = () => navigate(`/scout/onboard?next=${encodeURIComponent(`/markets/${id}`)}`);
   const [option, setOption] = useState(0),
     [slot, setSlot] = useState(1),
     [stake, setStake] = useState("100"),
@@ -184,12 +190,11 @@ export default function Stake() {
         status={market.status}
         end={market.status === "Open" ? market.submitEnd : undefined}
       />
-      {(!scout || scout.tier === undefined) && (
-        <Note title="Verify your scout identity first">
-          <Link className="button" to="/scout/onboard">
-            Open scout onboarding
-          </Link>
-        </Note>
+      {!verified && (
+        <div className="note-card">
+          <Icon name="info" />
+          <p><strong>Only verified scouts can stake or add a team.</strong> Read the market freely. When you press stake, Bisik takes you to a one-time GitHub proof and brings you back here.</p>
+        </div>
       )}
       <div className="columns">
         <div className="main-column stack">
@@ -293,32 +298,36 @@ export default function Stake() {
                   onChange={(e) => setStake(e.target.value)}
                 />
               </label>
-              <button
+              <WalletActionButton
                 className="button full"
                 disabled={
                   !!action.busy ||
                   !eligible ||
                   !market.optionCount ||
                   !wallet.publicKey ||
-                  scout?.tier === undefined ||
-                  reason.trim().length < market.minReasonLen
+                  (verified && reason.trim().length < market.minReasonLen)
                 }
                 onClick={() =>
-                  action.run(
-                    "Proving membership and sealing your stake",
-                    sealStake,
-                  )
+                  verified
+                    ? action.run(
+                        "Proving membership and sealing your stake",
+                        sealStake,
+                      )
+                    : toVerify()
                 }
               >
-                {eligible
-                  ? `Seal and stake on option ${option + 1}`
-                  : "Submissions are closed"}
-              </button>
+                {!eligible
+                  ? "Submissions are closed"
+                  : verified
+                    ? `Seal and stake on option ${option + 1}`
+                    : "Verify to stake"}
+              </WalletActionButton>
             </div>
           </Frame>
           <Feedback action={action} />
           <details className="fold">
             <summary>Team not listed? Add it as a new option</summary>
+            <p>The team does not need a Bisik account or a registered wallet.</p>
           <Frame>
             <div className="stack">
               <h3>Add a team option</h3>
@@ -347,7 +356,7 @@ export default function Stake() {
                   ))}
                 </select>
               </label>
-              <button
+              <WalletActionButton
                 className="button outline"
                 disabled={
                   !eligible ||
@@ -357,7 +366,7 @@ export default function Stake() {
                   market.optionCount >= 16
                 }
                 onClick={() =>
-                  action.run("Adding a sealed team option", async () => {
+                  !verified ? toVerify() : action.run("Adding a sealed team option", async () => {
                     requireWallet(wallet.provider);
                     const ref = await api("/options/team-ref", {
                       marketId: market.id,
@@ -386,7 +395,7 @@ export default function Stake() {
                 }
               >
                 Add sealed option
-              </button>
+              </WalletActionButton>
             </div>
           </Frame>
           </details>

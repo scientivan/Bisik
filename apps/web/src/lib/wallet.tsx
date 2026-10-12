@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -17,6 +18,7 @@ import { anchor, program as makeProgram } from "@bisik/sdk";
 import { Buffer } from "buffer";
 import { api } from "./api";
 import { network } from "./storage";
+import { captureSolflareConnectError } from "./wallet-diagnostics";
 export const connection = new Connection(
   import.meta.env.VITE_SOLANA_RPC_URL ||
     import.meta.env.VITE_RPC_URL ||
@@ -31,6 +33,11 @@ interface WalletContextValue {
   provider: any;
   program: any;
   token: string | null;
+  pickerOpen: boolean;
+  connecting: string;
+  connectionError: string;
+  requestConnect: () => void;
+  closePicker: () => void;
   connect: (wallet: any) => Promise<void>;
   disconnect: () => Promise<void>;
   login: () => Promise<string>;
@@ -40,7 +47,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [wallets, setWallets] = useState<any[]>([]),
     [selected, setSelected] = useState<any>(null),
     [account, setAccount] = useState<any>(null),
-    [token, setToken] = useState<string | null>(null);
+    [token, setToken] = useState<string | null>(null),
+    [pickerOpen, setPickerOpen] = useState(false),
+    [connecting, setConnecting] = useState(""),
+    [connectionError, setConnectionError] = useState("");
+  const attempt = useRef(0);
+  const pending = useRef(false);
+  const stopDiagnostics = useRef<(() => void) | null>(null);
+  useEffect(() => () => stopDiagnostics.current?.(), []);
+  const activeAddress = useRef<string | null>(null);
+  activeAddress.current = account?.address ?? null;
   useEffect(() => {
     const registry = getWallets();
     const update = () =>
@@ -66,13 +82,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       wallet = wallets.find((w) => w.name === name);
     if (!wallet || selected) return;
     let active = true;
+    const restoreAttempt = attempt.current;
     void wallet.features["standard:connect"]
       .connect({ silent: true })
       .then((r: any) => {
         const a = r.accounts.find((a: any) =>
           a.chains.includes(`solana:${network}`),
         );
-        if (active && a) {
+        if (active && a && restoreAttempt === attempt.current && !pending.current) {
+          new PublicKey(a.address);
+          activeAddress.current = a.address;
           setSelected(wallet);
           setAccount(a);
         }
@@ -88,8 +107,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (!events) return;
     return events.on("change", ({ accounts }: any) => {
       if (accounts) {
-        setAccount(accounts[0] ?? null);
+        const next = accounts.find((a: any) => a.chains.includes(`solana:${network}`)) ?? null;
+        activeAddress.current = next?.address ?? null;
+        setAccount(next);
         setToken(null);
+        if (!next) {
+          sessionStorage.removeItem("bisik:wallet");
+          setSelected(null);
+        }
       }
     });
   }, [selected]);
@@ -148,23 +173,70 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [provider],
   );
   async function connect(wallet: any) {
-    const r = await wallet.features["standard:connect"].connect();
-    const a = r.accounts.find((a: any) =>
-      a.chains.includes(`solana:${network}`),
-    );
-    if (!a) throw Error(`This wallet has no ${network} account.`);
-    sessionStorage.setItem("bisik:wallet", wallet.name);
-    setSelected(wallet);
-    setAccount(a);
-    setToken(null);
+    if (pending.current) return;
+    pending.current = true;
+    const currentAttempt = ++attempt.current;
+    setConnecting(wallet.name);
+    setConnectionError("");
+    const diagnostics = wallet.name === "Solflare" ? captureSolflareConnectError() : null;
+    stopDiagnostics.current = diagnostics?.stop ?? null;
+    try {
+      const r = await wallet.features["standard:connect"].connect();
+      if (currentAttempt !== attempt.current) return;
+      const a = r.accounts.find((a: any) => a.chains.includes(`solana:${network}`));
+      if (!a) throw Error(`${wallet.name} did not provide a Solana ${network} account. Enable Solana ${network} in your wallet, then try again.`);
+      new PublicKey(a.address);
+      sessionStorage.setItem("bisik:wallet", wallet.name);
+      activeAddress.current = a.address;
+      setSelected(wallet);
+      setAccount(a);
+      setToken(null);
+      setPickerOpen(false);
+    } catch (error) {
+      // The adapter may reject its Promise between window message listeners.
+      // Finish that message dispatch before reading the matching bridge error.
+      if (diagnostics) await new Promise(resolve => setTimeout(resolve, 0));
+      if (currentAttempt !== attempt.current) return;
+      const e = diagnostics?.error() ?? error as { code?: number; message?: string };
+      setConnectionError(wallet.name === "Solflare" && e.code === -32603 && /transport error/i.test(e.message ?? "")
+        ? `Solflare could not communicate with its extension background service. In Brave, open brave://extensions, switch Solflare off and on, then open Bisik in a new tab and reconnect. Wallet error (code -32603): Transport error.`
+        : e.message === "Connection rejected" && e.code !== 4001
+        ? `${wallet.name} could not complete the connection. If no approval window appeared, open and unlock the wallet extension, close any old approval windows, then reload this page and try again. Wallet error: Connection rejected.`
+        : e.code === 4001 || /reject|declin|cancel/i.test(e.message ?? "")
+          ? `Connection was declined in ${wallet.name}. Unlock your wallet and approve the connection request, then try again.`
+          : `${wallet.name} connection failed${e.code === undefined ? "" : ` (code ${e.code})`}: ${e.message || "Open your wallet and try again."}`);
+    } finally {
+      diagnostics?.stop();
+      if (stopDiagnostics.current === diagnostics?.stop) stopDiagnostics.current = null;
+      if (currentAttempt === attempt.current) {
+        pending.current = false;
+        setConnecting("");
+      }
+    }
+  }
+  function requestConnect() {
+    setConnectionError("");
+    setPickerOpen(true);
+  }
+  function closePicker() {
+    stopDiagnostics.current?.();
+    stopDiagnostics.current = null;
+    ++attempt.current;
+    pending.current = false;
+    setConnecting("");
+    setConnectionError("");
+    setPickerOpen(false);
   }
   async function disconnect() {
     sessionStorage.removeItem("bisik:wallet");
-    if (selected?.features["standard:disconnect"])
-      await selected.features["standard:disconnect"].disconnect();
+    const previous = selected;
+    closePicker();
+    activeAddress.current = null;
     setSelected(null);
     setAccount(null);
     setToken(null);
+    if (previous?.features["standard:disconnect"])
+      await previous.features["standard:disconnect"].disconnect();
   }
   async function login() {
     if (!selected || !account) throw Error("Connect a wallet first.");
@@ -180,6 +252,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       nonce: nonce.nonce,
       signature: Buffer.from(signed.signature).toString("base64"),
     });
+    if (activeAddress.current !== account.address) throw Error("Your wallet changed. Sign in again with the current account.");
     setToken(r.token);
     return r.token as string;
   }
@@ -193,6 +266,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         provider,
         program,
         token,
+        pickerOpen,
+        connecting,
+        connectionError,
+        requestConnect,
+        closePicker,
         connect,
         disconnect,
         login,

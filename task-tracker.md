@@ -1,6 +1,6 @@
 # Bisik: Task Tracker, Rencana Build, dan Spesifikasi Antarmuka
 
-> **Versi 1.5 · diperbarui Sabtu 10 Oktober 2026, 21:15 WIB · pemilik: Dien (keputusan) dan agent (eksekusi)**
+> **Versi 1.7 · diperbarui 12 Oktober 2026 · pemilik: Dien (keputusan) dan agent (eksekusi)**
 >
 > Dokumen hidup. Dokumen ini satu-satunya tempat status pengerjaan Bisik. Setiap kali ada task yang dimulai, selesai, gagal, atau berubah, perbarui status task di bagian 8 dan tambahkan baris di **Progress Log** (bagian 15).
 >
@@ -69,7 +69,7 @@ Kalau kamu agent baru tanpa konteks, urutan bacanya:
 | **Scout** | Mengusulkan tim (opsi), men-stake, menulis alasan. Anonim di dalam grup tier |
 | **Pembeli (ekosistem)** | Melihat pratinjau, menawar eksklusivitas atau membeli harga rata, membaca sinyal, mencatat hasil |
 | **Pembuat market** | Membuka Sourcing Round (operator) atau Market Eksklusif (ekosistem) |
-| **Tim (opsi)** | Objek sinyal. Bisa opt-in atau opt-out |
+| **Tim (opsi)** | Objek sinyal; tidak wajib memiliki akun. Persetujuan untuk perkenalan/verifikasi hasil; keberatan lewat kebijakan |
 | **Operator (Bisik)** | Menjalankan server verifier, Veritas, keeper, dan memutus sengketa di v1 |
 | **Arcium MXE** | Menghitung stake, tawaran, agregasi, dan payout secara terenkripsi |
 | **Reclaim (zkTLS)** | Attestor yang menandatangani bukti prestasi GitHub |
@@ -92,14 +92,14 @@ Mesin status market: `Draft → Open → Closed → Auction → Allocated → Ou
 | ID | Keputusan |
 |---|---|
 | D-01 | Nama produk **Bisik** |
-| D-02 | Pembuat market: operator (Sourcing Round) dan ekosistem (Market Eksklusif) |
+| D-02 | ~~Pembuat market: operator (Sourcing Round) dan ekosistem (Market Eksklusif)~~ Diganti 13 Okt (persetujuan Dien): Market Eksklusif oleh wallet mana pun; putaran lelang dibuka pembeli terverifikasi mana pun (`BuyerProfile.verified`), pembuat tidak mendapat alokasi khusus dan menawar seperti pembeli lain. Aktif setelah upgrade devnet |
 | D-03 | b = 2 slot eksklusif, x = 3 sinyal disembunyikan per slot, harga cadangan, harga rata |
 | D-04 | Hasil = deploy di chain pembeli atau terima grant pembeli; jendela 90 hari (bisa dipendekkan untuk demo) |
 | D-05 | Pembeli wajib menandai minimal 1 opsi; kalau tidak, otomatis ke skor tertinggi |
 | D-06 | Stake 10–500 USDC per posisi; maksimal 3 opsi per scout per market |
 | D-07 | Dana slash ke dana amal |
-| D-08 | Pembagian pembayaran pembeli: 80% scout / 15% platform / 5% tim opt-in |
-| D-09 | Hanya entitas publik; tim bisa opt-out; dapat bagian kalau opt-in |
+| D-08 | Pembagian pembayaran pembeli: 85% scout / 15% platform, tanpa bagian tim (revisi Dien 12 Okt) |
+| D-09 | Hanya entitas publik; keberatan sebagai kebijakan, tanpa bagian otomatis atau kewajiban registrasi; halaman Team ditunda (revisi Dien 12 Okt) |
 | D-10 | Layanan AI (Veritas) di v1 melihat plaintext alasan. Ini asumsi kepercayaan yang diungkapkan |
 | D-11 | Lisensi MIT |
 | D-12 | Validasi permintaan lewat pesan digital dari akun Dien, tidak memblokir development |
@@ -174,7 +174,7 @@ Semua path relatif terhadap folder `Bisik/`.
 ### 3.2 Yang belum ada
 
 - ✅ **Devnet live (A6/H3):** program `aFNfbxfgBuQ6tr5qXDpTmTWrQ8hjLGYNEtdp2L7HjvD` + MXE di cluster Arcium **456**, Arcium **0.15.0**. Circuit di repo publik `scientivan/bisik-circuits` (URL raw dipin ke commit `a86729c`). Seed demo devnet sukses (mint mock USDC `F1uGxYkPfypwni9tfLDSCanFX5dN1nDhPSz7izFEWR37`).
-- 🟡 Frontend (fase G): desain disetujui Dien pada 11 Okt (`DESIGN.md`, `docs/design-reference/`). SDK sudah bisa jalan di browser (`docs/web-sdk-bundling.md`). Implementasi `apps/web` G1–G12 tersedia. Chrome lulus create → stake ZK → dekripsi MPC → klaim ke alamat baru (market 6, total 27 mock USDC). Penerimaan G2 butuh login GitHub Dien; Safari belum, G10 opt-out belum didukung program. Rincian di `docs/frontend-implementation.md`.
+- 🟡 Frontend (fase G): desain disetujui Dien pada 11 Okt (`DESIGN.md`, `docs/design-reference/`). SDK sudah bisa jalan di browser (`docs/web-sdk-bundling.md`). Implementasi `apps/web` G1–G12 tersedia. Chrome lulus create → stake ZK → dekripsi MPC → klaim ke alamat baru (market 6, total 27 mock USDC). Penerimaan G2 butuh login GitHub Dien; Safari belum; G10 ditunda atas keputusan Dien 12 Okt. Rincian di `docs/frontend-implementation.md`.
 - ❌ Uji live Reclaim dengan akun GitHub asli (R23). Butuh server di URL publik (I3) atau tunnel.
 - ✅ D4 (`reveal_signals`) dan D6 (reputasi terenkripsi) lulus di localnet **dan di devnet** (market 3). ⚠️ Tabel reputasi devnet berisi 6 entri acak dari insiden kredit posisi lama (lihat Progress Log 20:45).
 - ❌ Video, project di Arena, naskah demo.
@@ -345,7 +345,7 @@ Asumsi ini **wajib diungkapkan** di README dan video.
 - **Hash umum:** `keccak256` (syscall `solana_program::keccak`).
 - **Field hash Semaphore:** `fieldHash(x32) = keccak256(x32) >> 8`, dengan x32 berupa 32 byte big-endian. Ini wajib sama persis dengan `@semaphore-protocol/proof`.
 - **Tier:** `0 = Bronze`, `1 = Silver`, `2 = Gold`. Multiplier reputasi [Usulan]: 1,00 / 1,15 / 1,30 (basis poin 10000 / 11500 / 13000).
-- **Basis poin:** `fee_bps = 1500`, `team_bps = 500`, sisa `8000` untuk scout (D-08).
+- **Basis poin:** `fee_bps = 1500`, `team_bps = 0` (field kompatibilitas), sisa `8500` untuk scout (D-08).
 
 ### 6.2 Program onchain `bisik`
 
@@ -356,6 +356,7 @@ Asumsi ini **wajib diungkapkan** di README dan video.
 | `Config` | `["config"]` | `admin`, `operator`, `usdc_mint`, `treasury`, `charity`, `fee_bps: u16`, `team_bps: u16`, `market_count: u64`, `current_epoch: u32`, `epoch_len: i64`, `k_min: u8 (5)`, `bump` |
 | `GroupRoot` | `["group", tier u8, epoch u32 LE]` | `tier`, `epoch`, `root: [u8;32]`, `size: u32`, `history: [[u8;32];4]`, `updated_at` |
 | `SourceNullifier` | `["src", nullifier [u8;32]]` | `created_at`. Keberadaan akun ini berarti akun sumber sudah dipakai |
+| `BuyerRecord` (N1, 13 Okt) | `["brec", buyer]` | `buyer`, `markets_joined`, `outcomes_recorded`, `defaults_applied`, `disputes_opened`, `disputes_upheld`, `disputes_rejected: u32`, `bump`. Dibuat `init_if_needed` oleh penanda tangan instruksi; penghitung mulai dari 0 saat upgrade |
 | `BuyerProfile` | `["buyer", authority]` | `authority`, `pseudonym_hash: [u8;32]`, `verified: bool`, `bought: u32`, `late_outcomes: u32`, `disputes_rejected: u32` |
 | `Market` | `["market", id u64 LE]` | Lihat di bawah tabel ini |
 | `Escrow` (token account) | `["escrow", market]` | Authority = PDA `Market` |
@@ -385,7 +386,7 @@ Asumsi ini **wajib diungkapkan** di README dan video.
 | 2 | `publish_group_root(tier, epoch, root, size)` | operator | `size ≥ k_min`, kecuali flag demo | Upsert `GroupRoot`; root lama masuk `history` |
 | 3 | `register_source_nullifier(nullifier)` | operator | Belum ada | Membuat `SourceNullifier` (anti-sybil, D-16) |
 | 4 | `register_buyer(authority, pseudonym_hash)` | operator | — | `BuyerProfile.verified = true` |
-| 5 | `create_market(params, kind, question_hash, category, durations)` | creator | Parameter dalam batas; `Auction` hanya oleh operator atau pembuat terverifikasi | Membuat `Market` dan `Escrow`; `Exclusive` menyetor `pool` |
+| 5 | `create_market(params, kind, question_hash, category, durations)` | creator | Parameter dalam batas; `Auction` hanya oleh pembeli terverifikasi (akun opsional `buyer_profile`, wajib untuk lelang); akun `buyer_record` pembuat | Membuat `Market` dan `Escrow`; `Exclusive` menyetor `pool` |
 | 6 | `add_option(market, team_commitment, category)` | siapa pun (scout) | `status = Open`, `option_count < 16` | Membuat `OptionEntry` |
 | 7 | `stake(market, slot, amount, tier, epoch, proof: [u8;256], root, nullifier, enc_option, nonce, reason_hash, credit_ct, credit_nonce)` | wallet stake (sekali pakai) | `Open`; `slot ∈ 1..3`; batas `amount`; `root ∈ GroupRoot[tier][epoch]` (root atau history); `scope = (market_id << 8) | slot`; `message = keccak(payload)` (6.4); bukti Groth16 valid; PDA `Position` belum ada | Transfer USDC ke `Escrow`; membuat `Position`; menghitung `weight_bps` (bonus awal × tier); mengantre circuit `allocate_position` |
 | 8 | `close_submit(market)` | siapa pun | `now ≥ submit_end` | `status = Closed`; mengantre `aggregate_preview`; callback mengisi `preview` |
@@ -395,14 +396,14 @@ Asumsi ini **wajib diungkapkan** di README dan video.
 | 12 | `select_hidden(market, options[≤x])` | pembeli rank `next_rank_to_select` | Urutan ketat #1 lalu #2; opsi belum disembunyikan orang lain | Mengisi `Allocation.hidden`; `next_rank_to_select += 1` |
 | 13 | `buy_flat(market)` | pembeli terverifikasi | `Allocated` dan semua rank sudah memilih (atau timeout) | Transfer `flat_price` ke `pool`; membuat `Allocation(rank 0)` |
 | 14 | `request_intro(market, nullifier)` / `accept_intro(...)` | pembeli eksklusif / scout (lewat bukti) | D-15: hanya pemegang eksklusif | P2. v1 lewat server dengan kontak terenkripsi |
-| 15 | `register_deploy_wallet(market, option, wallet)` | operator (atas klaim tim opt-in) | — | Mengisi `OptionEntry.deploy_wallet` |
+| 15 | `register_deploy_wallet(market, option, wallet)` | operator (persetujuan tim + bukti kepemilikan untuk verifikasi hasil) | — | Mengisi `OptionEntry.deploy_wallet`; field legacy `opted_in`/`opted_mask` menandai registrasi wallet, tanpa hak pembayaran |
 | 16 | `record_outcome(market, buyer, option, kind, evidence_hash)` | operator (oracle Solana) atau pembeli (atestasi grant) | `OutcomeWindow`; opsi termasuk sinyal yang dibeli pembeli | Membuat `OutcomeRecord` |
 | 17 | `finalize_outcomes(market)` | siapa pun | `now ≥ outcome_end` | Menerapkan aturan default D-05; `status = Settling` |
 | 18 | `open_dispute(market, nullifier, claim_hash, evidence_hash)` | pembeli yang membeli sinyal itu | Dalam jendela sengketa | Membuat `Dispute`; posisi dibekukan |
 | 19 | `resolve_dispute(market, nullifier, upheld)` | operator | `Open`, lewat deadline tanggapan | Upheld: `Position.slashed`, stake ke `charity` (D-07) |
 | 20 | `settle_position(market, nullifier)` | siapa pun (keeper) | `Settling`, belum di-settle | Mengantre `compute_payout`; callback mengisi `Position.payout` |
 | 21 | `claim(market, nullifier, recipient, proof)` | siapa pun | Bukti Semaphore dengan scope sama dan `message = keccak("claim" ‖ recipient)`; `settled`; belum `claimed`; tidak `slashed` | Transfer `amount + payout` ke `recipient` |
-| 22 | `settle_market_fees(market)` | siapa pun | Semua posisi sudah di-settle | Transfer 15% ke `treasury`, 5% ke tim opt-in (atau kembali ke pool scout) |
+| 22 | `settle_market_fees(market)` | siapa pun | Semua posisi sudah di-settle | Transfer 15% ke `treasury`; tidak ada pembayaran tim. Entry point legacy `pay_team_share` menolak transaksi setelah upgrade |
 | 23 | `rotate_epoch()` | operator | `now ≥ epoch_start + epoch_len` | `current_epoch += 1` |
 
 **Event** (untuk indexer dan UI): `MarketCreated`, `OptionAdded`, `Staked{market, nullifier, slot, amount, tier}`, `MarketClosed{preview}`, `BidPlaced{market, buyer}`, `AuctionResolved{winners, prices}`, `HiddenSelected{buyer, rank, count}`, `FlatBought`, `OutcomeRecorded`, `DisputeOpened/Resolved`, `PositionSettled{nullifier, payout}`, `Claimed{nullifier}`, `GroupRootPublished`.
@@ -527,7 +528,7 @@ export async function analyze(text: string, corpus: string[]): Promise<VeritasSc
 | `/scout/positions` | scout | Posisi tersimpan lokal, status, klaim ke alamat pilihan, tanggapi sengketa atau perkenalan |
 | `/buyer/markets/:id` | pembeli | Pratinjau → tawaran tertutup (ceiling) → hasil → pilih x sinyal sesuai urutan → baca sinyal → minta perkenalan → catat hasil / sengketa |
 | `/create` | pembuat / operator | Form market (parameter default D-03/D-06, durasi demo) |
-| `/team` | tim | Opt-in / opt-out dan daftar wallet deploy (P2) |
+| `/team` | ditunda | Route dan navigasi dihapus; registrasi wallet untuk bukti hasil tetap melalui `/admin` |
 | `/admin` | operator | Verifikasi pembeli, sengketa, epoch, picu keeper |
 
 - **Wallet:** Phantom lewat wallet-standard.
@@ -645,7 +646,7 @@ Format: **ID · judul · prioritas · pemilik · dependensi.** Lalu langkah, dan
   - **Selesai bila:** upheld → stake ke charity dan posisi tidak bisa diklaim; rejected → normal.
 - [x] **C12 · `settle_position`, `claim`, `settle_market_fees` · P0 · agent · C10, D5**
   - Cadangan sebelum D5: payout dihitung operator dari data terdekripsi (diungkapkan).
-  - **Selesai bila:** total yang dibayarkan = stake + 80% pool (+ 15% treasury + 5% tim, atau kembali ke pool scout); tidak ada dana tersisa tak terdistribusi; klaim kedua ditolak.
+  - **Selesai bila:** total yang dibayarkan = stake + 85% pool + 15% treasury (selisih pembulatan integer dimungkinkan); tidak ada dana tersisa tak terdistribusi; klaim kedua ditolak.
 - [x] **C13 · Event + IDL · P0 · agent · C1–C12**
   - **Selesai bila:** IDL dihasilkan; event terbaca di tes.
 - [x] **C14 · Tes integrasi program · P0 · agent · C1–C13**
@@ -733,8 +734,8 @@ Format: **ID · judul · prioritas · pemilik · dependensi.** Lalu langkah, dan
   - Form grant/deploy dan klaim sengketa terhubung ke API serta transaksi onchain. API menolak klaim tersembunyi/posisi lain; respons scout dibuktikan dengan Semaphore. Walkthrough lengkap sengketa dari UI masih bagian H2.
 - [x] **G8 · Posisi dan klaim (scout) · P0 · agent · G4, C12**
 - [x] **G9 · Konsol admin · P1 · agent · G1, E8**
-- [~] **G10 · Halaman tim (opt-in/out) · P2 · agent · C10**
-  - Halaman siap; opt-in lewat operator terhubung ke `registerDeployWallet`. Program belum memiliki instruksi opt-out atau registrasi mandiri tim; UI mengungkapkan batas tersebut.
+- [ ] **G10 · Halaman tim · ditunda oleh Dien, 12 Okt**
+  - Route/navigasi Team dihapus. Tim tidak wajib mendaftar untuk diusulkan. `registerDeployWallet` tetap untuk verifikasi hasil dengan persetujuan dan bukti kepemilikan; tidak memberi hak payout.
 - [x] **G11 · Mode demo · P1 · agent · G5**
   - Preset durasi pendek dan banner "DEMO DATA".
 - [x] **G12 · Pemolesan UI dan aksesibilitas · P1 · agent · G2–G8**
@@ -787,6 +788,15 @@ Bahan lengkap: `../Ideation-Colosseum/living-doc/d12-outreach-kit.md`. Target: 1
 - [ ] **K3 · Sen 12 Okt jam kerja · Dien ·** Follow-up ke pembeli.
 - [ ] **K4 · Sen 12 Okt 20:00 · Dien + agent ·** Kunci angka. Agent merangkum `d12-evidence-log.csv` untuk J6.
 - [ ] **K5 · terus-menerus · agent ·** Setiap balasan yang ditempel Dien dicatat ke log bukti (tanpa nama orang, kutipan hanya kalau diizinkan).
+
+### Fase N: Rencana pengembangan berikutnya (setelah submit)
+
+| ID | Task | Status | Catatan |
+|---|---|---|---|
+| N1 | Reputasi pembeli onchain lewat akun baru `BuyerRecord` (PDA `["brec", buyer]`), tanpa mengubah layout `BuyerProfile`; penghitung di `create_market` (eksklusif), `open_bid`, `buy_flat`, `record_outcome`, `set_default_outcome`, `open_dispute`, `resolve_dispute` + upgrade devnet | [~] | 13 Okt, disetujui Dien: kode, IDL, SDK, server, web, seed dan e2e siap; tes Rust 7/7. Menunggu upgrade devnet (perlu `solana program extend`). Penghitung mulai 0 saat upgrade; web memakai nilai terbesar antara penghitung onchain dan hitungan scan akun lama |
+| N2 | Jenis outcome onchain terpisah untuk tanda "most valuable" pembeli: kind 3 | [~] | 13 Okt: program tidak memvalidasi kind (pembayaran hanya dari mask), jadi kind 3 cukup diubah di web (`Buyer.tsx`, label `outcome-oracle.tsx`). Tanda lama tetap kind 1. Aktif bersama upgrade N1 (perubahan web tidak butuh program baru, tetapi instruksi `record_outcome` kini butuh akun `buyer_record`) |
+| N3 | Bangun ulang grup tier epoch berikut dari hasil `epoch_tiers` (living doc §8.2 langkah 5) | [ ] | Sekarang reveal tier tidak mengubah grup stake. Jangan klaim tier berubah otomatis di pitch |
+| N4 | Jaringan oracle terbuka: pendaftaran verifier ber-stake, commit-reveal anonim, hadiah/slash berdasarkan konsensus, sengketa eskalasi | [ ] | Belum ada di program: `record_outcome` hanya menerima buyer atau `config.operator` (`lib.rs:772`). Butuh akun dan instruksi baru + upgrade devnet. Keputusan Dien 12 Okt: roadmap setelah submit, wajib tersampaikan di semua dokumen dan video demo. Rancangan di living doc §18.3; naskah di `important_for_demo.md` §5.1 dan §11 |
 
 ### Fase L: Uji dependensi (status)
 
@@ -955,6 +965,25 @@ Hanya ditambah, jangan dihapus. Format: `waktu WIB · siapa · apa · bukti/path
 
 - 2026-10-11 · agent · Browser Chrome devnet market 6 lulus pembuatan market dan callback init MPC, stake dengan bukti Semaphore dari browser, SIWS + reveal_signals + dekripsi lokal, settlement dan klaim ke alamat baru sebesar 27 mock USDC. Group onboarding memakai fixture sintetis demo, bukan bukti GitHub Dien. Build produksi dan typecheck lulus, tes frontend 3/3 dan server 10/10. Safari WebDriver ditolak karena remote automation nonaktif. Desain diperiksa desktop/mobile; reviewer meminta histogram nyata dan amber Operator reads; keduanya sudah dikoreksi dan verdict tindak lanjut ship untuk dua koreksi tersebut · `docs/frontend-implementation.md`, `scripts/frontend-devnet.ts`
 
+- 2026-10-12 · Dien + agent · Keputusan desain app: halaman `/profile` dengan bagian Buyer (publik ke scout) dan Scout (privat, hanya perangkat pemilik) yang tidak pernah ditampilkan berdampingan; reputasi pembeli dihitung di frontend dari data onchain yang ada, field onchain dicatat sebagai N1; alur 4 langkah di `/markets` dipindah ke halaman `/guide` (tab Buyer/Scout) dengan walkthrough interaktif ala game. Daftar gap living doc vs frontend disusun sebelum coding
+
+- 2026-10-12 · agent · Implementasi keputusan Dien hari ini: `/guide` (tab Buyer/Scout + walkthrough 6 quest per peran, lokal/sintetis) menggantikan chip alur di halaman kerja; `/profile` dua sisi + `/profile/buyer/:address` (rekam jejak pembeli dihitung di browser dari akun Bid/OutcomeRecord/Dispute, diuji dengan wallet FRTMLy9… di devnet). Subagent: tampilan sinyal pembeli memuat tier pendukung, D/A terpisah, flag, klaim fakta vs opini, langkah "most valuable" (dipetakan ke record_outcome kind 1); pratinjau market memuat sebaran tier (k=5) dan kategori; Create memakai satuan waktu, sengketa default 7 hari, parameter stake/alasan/x/bonus bisa diubah; daftar sengketa scout + indikator Dispute open; keeper menjalankan epoch_tiers otomatis + endpoint `/v1/reputation/epoch` (aktif setelah keeper dan server di-restart Dien). Web typecheck/build, tes web 7/7, server 15/15, keeper 6/6 lulus. Screenshot headless desktop/mobile; ekstensi Chrome tidak terhubung. Tidak commit/deploy/transaksi
+
+- 2026-10-12 · agent · Atas permintaan Dien: default scouting window 7 hari; header app jadi satu baris (role tools di kiri, role switch ikon+nama, How it works, Profile, tema, wallet di kanan), tinggi 60px di 1440 (sebelumnya dua baris dengan kalimat tujuan dan label "Use Bisik as"); profil scout menampilkan status epoch_tiers tanpa klaim grup berubah; copy grant di langkah most valuable dijelaskan. N2/N3 dicatat. Typecheck, build, tes web 7/7 lulus; screenshot headless 1440/1100/390
+
+- 2026-10-12 · agent · Atas review Dien: tombol Try demo buyer dihapus (walkthrough di /guide menggantikannya; route /demo tetap ada); halaman Profile dikemas ulang (kartu identitas dengan tanda pseudonim/tier, info tip untuk penjelasan sekunder, kartu angka bento, kartu epoch, note card). Typecheck, build, tes web 7/7 lulus; screenshot headless 1440/390 dengan data devnet asli
+
+- 2026-10-12 · agent · Atas permintaan Dien: tema default dark (pilihan light hanya tersimpan saat toggle, kunci `bisik:theme-choice`); tab Get verified dihapus, aksi stake/add team mengarahkan scout belum terverifikasi ke `/scout/onboard?next=`; cache data event-driven (server memori + logsSubscribe di scan RPC karena Alchemy menolak `logsSubscribe`, SSE `/v1/events`, halaman tanpa polling timer). Uji server port 8790: `/v1/markets` hangat 1–2 ms (sebelumnya 6 s), SSE mengirim versi. Deteksi perubahan dari transaksi nyata belum diamati. Server utama perlu restart. Tes server 15/15, web 7/7, build lulus
+
+- 2026-10-12 · agent · Bagian "Outcome oracle" di halaman Operator (`components/outcome-oracle.tsx`, tab `/admin#oracle`): statistik siapa yang menandatangani, jendela hasil terbuka per buyer/opsi yang terlihat dengan tombol Check deployment (`/v1/outcomes/check`) dan Sign with evidence (`record_outcome` oleh wallet operator, hash bukti), serta daftar OutcomeRecord dengan penanda tangan dan hash. Devnet saat ini 0 OutcomeRecord. Build/typecheck lulus; tanda tangan operator nyata belum diuji
+
+- 2026-10-12 · Dien + agent · Jaringan oracle terbuka (N4) diputuskan sebagai roadmap dan dicatat di living doc v0.23 §18.3 (PDF dibuat ulang), `important_for_demo.md` (§5 ketukan 10, §5.1, §7, §11, §12, §14), README trust assumptions, PRODUCT.md dan tracker
+
+- 2026-10-12 · agent · Atas review Dien: tabel /markets dan /scout dibuat ringkas (baris "N calls + USDC", bar dukungan mini, chip tier, pasangan harga Exclusive/Shared, "Refundable"), penjelasan tiap kolom dipindah ke info tip di header (dan label sel di mobile), catatan panjang di bawah tabel dihapus, filter kategori tim ditambahkan. Create: copy exclusive/auction diperjelas; helper Dispute window dikoreksi (dispute_len = waktu scout menanggapi setelah sengketa dibuka, `lib.rs:814`; pembeli boleh membuka sengketa sepanjang outcome window, `lib.rs:804`); kotak Who can create diperjelas. Pill sealed di dark mode diberi isi lebih terang. Build, tes web 7/7 lulus
+
+- 2026-10-12 · agent · Atas permintaan Dien: aksen amber (uang dan hal yang butuh tindakan) dan lavender (penjelasan dan sinyal pendukung) diterapkan di halaman app; panah dropdown diberi jarak kanan (chevron SVG, padding 42px); tab buyer baru "My bids" (`/buyer/bids`) dengan filter Needs you / In progress / Won or bought / Outbid / Settled dari akun Bid dan Market; kartu track record di profil sendiri bisa diklik ke halaman itu. Typecheck/build lulus. Data My bids dengan wallet terhubung belum diuji di browser
+- 2026-10-13 · agent · Pembuka lelang = pembeli terverifikasi (ganti D-02), `BuyerRecord` N1, outcome kind 3 N2. Build lokal SHA-256 `7db4a4e3…19171`, 1.686.880 byte (alokasi devnet 1.597.044, perlu extend). Tidak deploy/transaksi devnet · `contracts/programs/bisik/src/lib.rs`
+
 ## 16. Cara memperbarui dokumen ini
 
 1. **Saat mulai mengerjakan task:** ubah `[ ]` menjadi `[~]`.
@@ -967,3 +996,29 @@ Hanya ditambah, jangan dihapus. Format: `waktu WIB · siapa · apa · bukti/path
 - 2026-10-11 · agent · G6 browser market 8: dua tawaran tertutup lulus, refund/dekripsi/seleksi #1 lulus. Ditemukan keeper sudah refund #2 tetapi UI menawarkan refund lagi; diperbaiki dengan status bid.refunded dan recheck setelah race. Percobaan ulang tertahan rate limit RPC 429 (server lokal perlu restart); tidak mengklaim lelang UI lengkap lulus. Konsol sengketa membaca status onchain dan menonaktifkan keputusan ulang. G7 implementasi + pengikat klaim API selesai; H2 walkthrough sengketa lengkap belum. Dokumentasi desain pendamping selesai, dua koreksi reviewer ship, seluruh build/typecheck lulus · `docs/frontend-design-system.md`
 
 - 2026-10-11 · agent · Permintaan Dien: fullscreen hero termasuk header/rail pada perubahan zoom; animasi sesuai panduan; dark mode. Hero memakai 100dvh, rail normal-flow, ukuran fluid dan proportional fit khusus opening pada zoom ekstrem. Tema tersimpan, diterapkan sebelum render, mencakup landing/app/form. Animasi reveal/fill dan feedback 180ms; loop berhenti offscreen/hidden, reduced motion dihormati. Viewport simulasi 25–500% dan mobile lulus tanpa overflow/rail terpotong · `apps/web/src/lib/theme.tsx`, `apps/web/src/lib/motion.ts`, `DESIGN.md`
+
+
+### 11 Oktober 2026 · Perombakan visual Butter
+
+Atas permintaan Dien, frontend lama dipindah ke `apps/web-backup` dan `apps/web` baru mengikuti desain Butter dengan aset sinyal, isi konten, urutan section dan alur aplikasi lama. Backup dikecualikan dari pnpm workspace. Build/typecheck dan tiga tes frontend lulus; inspeksi Chrome desktop/mobile, tema, menu dan demo dilakukan tanpa transaksi devnet baru. Detail: `docs/frontend-butter-redesign.md`. Tidak commit/push/deploy.
+
+
+### 11 Oktober 2026 · Daftar market lebih jelas
+
+Atas permintaan Dien, role bar di bawah header dihapus. `/markets` dan `/scout` menjelaskan ronde/kategori/jumlah tim, jumlah submission dan deposit, bucket dukungan, serta stake per call. Judul ronde sintetis diberi pertanyaan demo berbeda dengan label eksplisit; metadata server/onchain tidak diubah. Build serta Chrome localhost:5173 desktop/mobile lulus tanpa overflow atau runtime error.
+
+### 11 Oktober 2026 · Koneksi wallet dan tombol aksi
+
+Atas permintaan Dien, pemilih Wallet Standard disatukan menjadi modal global. Semua aksi yang membutuhkan wallet menampilkan Connect Wallet ketika belum terhubung; koneksi tidak menjalankan aksi secara otomatis. Penolakan dapat dicoba ulang, akun wajib kompatibel devnet, pergantian akun/disconnect menghapus sesi API, hasil koneksi yang sudah dibatalkan diabaikan. Build/typecheck dan 3 tes frontend lulus. Chrome localhost:5173 memakai wallet simulasi untuk rejection/retry, approval, pergantian akun, disconnect, pembatalan serta keyboard/desktop/mobile; tidak mengklaim koneksi/transaksi wallet asli baru. `docs/wallet-connection.md`.
+
+### 12 Oktober 2026 · Solflare gagal sebelum popup
+
+Dien melaporkan error langsung tanpa popup di Brave. Pemeriksaan kode ekstensi Solflare 2.40.1 menunjukkan kegagalan jendela persetujuan juga dibungkus sebagai Connection rejected. UI tidak lagi menyebut penolakan pengguna untuk pesan generik tanpa kode 4001. Penyebab runtime ekstensi masih perlu dibuktikan. Typecheck dan uji wallet simulasi mencakup pesan generik serta retry; lihat `docs/wallet-connection.md`.
+
+- 12 Oktober 2026 · Solflare membuka wallet normal tetapi connect tetap gagal tanpa popup. Ditambahkan diagnostik sementara untuk membaca error bridge connect yang dibuang adapter. Uji Chrome dengan kode inpage Solflare terpasang + respons background simulasi berhasil mempertahankan kode -32603; sebab runtime milik Dien belum diketahui. Tidak mengklaim koneksi asli berhasil.
+
+- 12 Oktober 2026 · Error asli dari percobaan Dien: -32603 Transport error. Kode content.js mengeluarkannya saat runtime.sendMessage ke background ekstensi ditolak. UI kini memberi petunjuk reload ekstensi lewat toggle off/on Brave, tanpa menghapus wallet. Hasil pemulihan belum diverifikasi.
+
+- 2026-10-12 · Dien menyetujui penghapusan bagian otomatis 5% tim dan penundaan halaman Team. Source: 85% scout / 15% platform; transfer tim legacy ditolak; wallet terdaftar tidak mengurangi reward. Layout akun/instruksi dipertahankan untuk kompatibilitas. Devnet belum di-upgrade; payout tersimpan tidak dihitung ulang. Detail `docs/team-payment-removal.md`.
+
+- 2026-10-12 · Atas instruksi Dien, program devnet di-upgrade: slot 510110372, tx `5H7Zj8FbN6SyMVcmaSbxVNtxA88UwpLqo5poDRXKpqMJ7iebEZMrfswEPt7bFao7wWJYDpszuvSf1K54rcRAbxmw`. Bytecode cocok build; simulasi pembayaran tim ditolak 6024; 85/15 aktif. Audit semua market: 0–8 Settled, 9 Settling tanpa posisi; tidak ada team_paid. Navigasi role diubah mengikuti contoh Dien: grouped Use Bisik as + ikon/subtitle, tools per role, operator anchor sections, mobile/dark. Build/typecheck, tes Rust 3/3 + web 3/3, browser 1440/390/320px dan localhost:5173 lulus. Detail `docs/devnet-upgrade-2026-10-12.md`, `docs/app-role-navigation.md`. Tidak commit/push atau deploy frontend produksi.

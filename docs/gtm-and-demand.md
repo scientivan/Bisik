@@ -51,8 +51,8 @@ These are **targets, not customers**. No one below has agreed to anything. Names
 **Split of every buyer payment** [Fact, code]:
 
 - 15% platform fee (`contracts/tests/e2e.ts:183`, `feeBps: 1500`).
-- Scouts: **80%** if the winning team opted in, **85%** if it did not (`contracts/programs/bisik/src/lib.rs:1041`).
-- Opted-in team: 5%, paid only to that team's registered deploy wallet (`lib.rs:982–990`).
+- Scouts: **85%** regardless of team wallet registration (revised D-08, 12 Oct).
+- Teams: no automatic share. A team needs no account to be proposed. Request consent for introductions and consent plus wallet ownership evidence for outcome verification. This rule is active on devnet after the 12 Oct program upgrade (slot 510110372).
 - Scout stake (10–500 USDC) is **always refunded in full**, unless a hoax is proven; slashed funds go to charity (decisions D-06, D-07).
 
 **Price anchors** [Fact]:
@@ -68,10 +68,9 @@ These are **targets, not customers**. No one below has agreed to anything. Names
 | 3 flat-price buyers @ 500 | 1,500 |
 | **Gross** | **5,500** |
 | Platform (15%) | 825 |
-| Scouts (80%, all winning teams opted in) | 4,400 |
-| Teams (5%) | 275 |
+| Scouts (85%) | 4,675 |
 
-If no winning team opted in, scouts receive 4,675 (85%) and teams 0.
+Scouts receive 85% regardless of deploy-wallet registration; there is no team share.
 
 [Inference] The per-slot price sits inside the Retro9000 grant-referral range ($500–$10,000). That only shows the budget line exists. It does not show anyone will pay this for our product.
 
@@ -170,7 +169,7 @@ Summary line for the form: *"We asked N ecosystem BD/grant leads; M replied; K w
 - **Few buyers.** Possibly a dozen ecosystems at most. [Inference] Revenue per round must be high, or the model must extend to other uses (hiring, research).
 - **Scouts don't show up.** The Retro9000 referral data points this way.
 - **De-anonymisation in small communities.** Mitigated by coarse tiers, k = 5, AI privacy filter. Not eliminated.
-- **Teams object to being "traded".** Opt-in/opt-out, 5% share, public entities only (D-09).
+- **Teams object to being "traded".** Public entities only, a policy channel for objections, consent for introductions and outcome verification (revised D-09). No automatic team payment.
 - **Trust assumptions.** In v1 the operator's AI service sees plaintext reasons (D-10). Arcium Mainnet Alpha is not fully decentralised.
 - **Closeness to Bench.** Judges know Bench, so the differences must stay explicit.
 - **Gambling perception.** Bisik is not a prediction market. Stakes are refunded, rewards come only from buyer payments, and wrong opinions are never slashed.

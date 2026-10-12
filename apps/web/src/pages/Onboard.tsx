@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { createIdentity, exportIdentity, importIdentity } from "@bisik/zk";
 import { api } from "../lib/api";
 import {
@@ -10,13 +10,16 @@ import {
   type PositionRecord,
 } from "../lib/storage";
 import { useAction } from "../lib/hooks";
-import { Feedback, Frame, Note, PageTitle, Pill } from "../components/ui";
+import { Feedback, Frame, Icon, Note, PageTitle, Pill } from "../components/ui";
 import { Steps } from "../components/roles";
 export default function Onboard() {
   const [scout, setScout] = useState<Scout | null>(() => read("scout", null)),
     [status, setStatus] = useState(""),
     [importText, setImportText] = useState("");
   const action = useAction();
+  // Set when a scout-only action sent the visitor here; only same-site paths are followed.
+  const next = useSearchParams()[0].get("next");
+  const back = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
   function save(next: Scout) {
     write("scout", next);
     setScout(next);
@@ -50,6 +53,16 @@ export default function Onboard() {
       </PageTitle>
 
       <Steps role="scout" at={0} />
+      {back && (
+        <div className="note-card">
+          <Icon name="info" />
+          <p>
+            <strong>{scout?.tier !== undefined ? "You are verified." : "Verify once, then continue."}</strong>{" "}
+            {scout?.tier !== undefined ? "Go back and finish what you started." : "Only verified scouts can stake or add teams. Bisik returns you to the market after the proof."}
+          </p>
+          {scout?.tier !== undefined && <Link className="button small" to={back}>Continue</Link>}
+        </div>
+      )}
       <div className="columns">
         <div className="main-column stack">
           <Frame>

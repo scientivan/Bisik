@@ -19,6 +19,8 @@ export interface Chain {
   setDefaultOutcome(marketId: number, buyerIndex: number, option: number): Promise<string>;
   /** D4: the buyer's stored signal view (ciphertext encrypted to the buyer's x25519 key). */
   fetchSignalReveal?(marketId: number, buyer: PublicKey): Promise<any | null>;
+  /** Calls `cb` for every confirmed transaction that touches the program. Returns an unsubscribe function. */
+  onProgramChange?(cb: () => void): () => void;
 }
 
 export function solanaChain(rpcUrl: string, keypairPath: string, scanRpcUrl = rpcUrl): Chain {
@@ -27,9 +29,15 @@ export function solanaChain(rpcUrl: string, keypairPath: string, scanRpcUrl = rp
   const provider = makeProvider(conn, operator);
   const program: any = mkProgram(provider);
   // Separate read-only program for getProgramAccounts scans, so the main RPC can be a plan without them.
-  const scanProgram: any = scanRpcUrl === rpcUrl ? program : mkProgram(makeProvider(new Connection(scanRpcUrl, "confirmed"), operator));
+  const scanConn = scanRpcUrl === rpcUrl ? conn : new Connection(scanRpcUrl, "confirmed");
+  const scanProgram: any = scanRpcUrl === rpcUrl ? program : mkProgram(makeProvider(scanConn, operator));
   const P = pdas(PROGRAM_ID);
   const send = (b: any) => b.signers([operator]).rpc({ commitment: "confirmed", skipPreflight: true });
+  /** N1: the BuyerRecord PDA of `market.buyers[buyerIndex]` (the program checks the index range). */
+  const buyerRecordAt = async (id: number, buyerIndex: number) => {
+    const m: any = await program.account.market.fetch(P.market(id));
+    return P.buyerRecord(m.buyers[buyerIndex % 4] as PublicKey);
+  };
   return {
     operator: operator.publicKey,
     registerSourceNullifier: (n) =>
@@ -39,6 +47,11 @@ export function solanaChain(rpcUrl: string, keypairPath: string, scanRpcUrl = rp
     registerBuyer: (authority, h) =>
       send(program.methods.registerBuyer(authority, Array.from(h)).accounts({ operator: operator.publicKey, config: P.config(), buyer: P.buyer(authority) })),
     currentEpoch: async () => ((await program.account.config.fetch(P.config())) as any).currentEpoch as number,
+    onProgramChange: (cb) => {
+      // Some RPC plans (Alchemy free tier) reject logsSubscribe; the scan RPC (public devnet) accepts it.
+      const id = scanConn.onLogs(PROGRAM_ID, (l) => { if (!l.err) cb(); }, "confirmed");
+      return () => void scanConn.removeOnLogsListener(id);
+    },
     fetchMarket: async (id) => (await program.account.market.fetchNullable(P.market(id))) as any,
     // Markets are PDAs indexed 0..market_count-1, so the list needs no account scan.
     fetchMarkets: async () => {
@@ -61,14 +74,24 @@ export function solanaChain(rpcUrl: string, keypairPath: string, scanRpcUrl = rp
       }
     },
     fetchOption: async (id, index) => (await program.account.optionEntry.fetchNullable(P.option(P.market(id), index))) as any,
-    recordOutcome: (id, bi, opt, kind, ev) =>
+    recordOutcome: async (id, bi, opt, kind, ev) =>
       send(
         program.methods
           .recordOutcome(bi, opt, kind, Array.from(ev))
-          .accounts({ signer: operator.publicKey, config: P.config(), market: P.market(id), outcome: P.outcome(P.market(id), bi, opt) }),
+          .accounts({
+            signer: operator.publicKey,
+            config: P.config(),
+            market: P.market(id),
+            outcome: P.outcome(P.market(id), bi, opt),
+            buyerRecord: await buyerRecordAt(id, bi),
+          }),
       ),
-    setDefaultOutcome: (id, bi, opt) =>
-      send(program.methods.setDefaultOutcome(bi, opt).accounts({ operator: operator.publicKey, config: P.config(), market: P.market(id) })),
+    setDefaultOutcome: async (id, bi, opt) =>
+      send(
+        program.methods
+          .setDefaultOutcome(bi, opt)
+          .accounts({ operator: operator.publicKey, config: P.config(), market: P.market(id), buyerRecord: await buyerRecordAt(id, bi) }),
+      ),
     /** Program deployments signed by `wallet` since a timestamp (BPF upgradeable loader). */
     findDeploys: async (wallet, since) => {
       const sigs = await conn.getSignaturesForAddress(wallet, { limit: 100 });

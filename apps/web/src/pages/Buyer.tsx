@@ -1,3 +1,4 @@
+import { useDataVersion } from "../lib/live";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -26,6 +27,7 @@ import { amount, category, parseUsdc } from "../lib/amounts";
 import { read, write } from "../lib/storage";
 import { useMarket, useAction } from "../lib/hooks";
 import {
+  WalletActionButton,
   Feedback,
   Frame,
   Hatch,
@@ -38,6 +40,7 @@ import {
   StatusStrip,
 } from "../components/ui";
 import { Steps } from "../components/roles";
+import { IndicatorNote, SignalDetails } from "../components/SignalDetails";
 const cluster = Number(import.meta.env.VITE_ARCIUM_CLUSTER_OFFSET || 456);
 const mockMarket: Market = {
   id: 3,
@@ -71,12 +74,24 @@ const demoClaims = [
   "Holds an unsigned $150k grant offer from a rival ecosystem",
   "Private beta with about 3,000 weekly users",
 ];
+const demoOpinions = [
+  "The team will likely choose whichever chain helps them hire first",
+  "The founders seem ready to switch for the right audit support",
+  "The beta looks promising, but the team may be overstating traction",
+];
+/** Synthetic Veritas indicators, varied so the demo shows each label. */
+const demoChecks: { D: number; A: number | null; flags: string[] }[] = [
+  { D: 0.08, A: 0.12, flags: [] },
+  { D: 0.12, A: 0.3, flags: [] },
+  { D: 0.83, A: null, flags: ["likely_duplicate", "ai_unavailable"] },
+];
 export default function Buyer({ demo = false }: { demo?: boolean }) {
   const { id } = useParams(),
     live = useMarket(demo ? undefined : id),
     market = demo ? mockMarket : live.market,
     wallet = useWallet(),
     action = useAction();
+  const dataVersion = useDataVersion();
   const [chain, setChain] = useState<any>(null),
     [bidAccount, setBidAccount] = useState<any>(null),
     [signals, setSignals] = useState<Signals | null>(null),
@@ -108,12 +123,10 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
         })
         .catch(() => {});
     void load();
-    const t = setInterval(() => void load(), 15000);
     return () => {
       active = false;
-      clearInterval(t);
     };
-  }, [demo, id]);
+  }, [demo, id, dataVersion]);
   useEffect(() => {
     let active = true;
     setBidAccount(null);
@@ -152,6 +165,12 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
       rank === 0 ||
       (rank === 1 && chain.nextRank >= 1) ||
       chain.nextRank >= 2);
+  const markMask: number = demo ? 0 : Number(chain?.masks?.[bi] ?? 0),
+    marked = (signals?.options ?? [])
+      .map((o) => o.index)
+      .filter((i) => bi >= 0 && markMask & (1 << i)),
+    teamName = (i: number) =>
+      signals?.options.find((o) => o.index === i)?.teamRef ?? `Option ${i + 1}`;
   async function token() {
     return wallet.token ?? (await wallet.login());
   }
@@ -167,16 +186,28 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
             teamRef,
             score: [0.44, 0.38, 0.18][index],
             nScouts: [2, 1, 1][index],
-            tierDist: [0, 0, 1],
+            tierDist: [
+              [0, 1, 1],
+              [1, 0, 0],
+              [1, 0, 0],
+            ][index],
             claims: [
               {
                 id: `demo-${index}`,
                 text: demoClaims[index],
                 kind: "verifiable",
               },
+              {
+                id: `demo-op-${index}`,
+                text: demoOpinions[index],
+                kind: "opinion",
+              },
             ],
             reasons: [
-              { filteredText: demoReasons[index], D: 0.08, A: 0.1, flags: [] },
+              {
+                filteredText: demoReasons[index],
+                ...demoChecks[index],
+              },
             ],
           }),
         ),
@@ -284,7 +315,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                     : "Before you buy, only the market-wide histogram is public."}
                 </p>
               </div>
-              <button
+              <WalletActionButton requiresWallet={!demo}
                 className={`button ${revealed ? "outline" : ""}`}
                 disabled={!!action.busy || (!demo && !finalView)}
                 onClick={() =>
@@ -300,7 +331,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                     : hasAllocation
                       ? "After allocation"
                       : "After purchase"}
-              </button>
+              </WalletActionButton>
             </div>
             {!revealed && (
               <Note title="Market-wide preview">
@@ -338,20 +369,25 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                   </div>
                   {revealed ? (
                     <div className="revealed-content stack">
-                      <p>
-                        {o.reasons.map((r: any) => r.filteredText).join(" ")}
-                      </p>
                       <div className="row">
                         <Pill state="yours">Yours</Pill>
-                        <Pill>{o.nScouts} positions</Pill>
+                        <Pill>
+                          {o.nScouts === 1
+                            ? "1 staked position"
+                            : `${o.nScouts} staked positions`}
+                        </Pill>
                         <Pill>
                           {
                             o.claims.filter((c: any) => c.kind === "verifiable")
                               .length
                           }{" "}
-                          verifiable claims
+                          checkable facts
                         </Pill>
+                        {marked.includes(o.index) ? (
+                          <Pill state="blue">Marked as valuable</Pill>
+                        ) : null}
                       </div>
+                      <SignalDetails option={o} showScore demo={demo} />
                       {o.summary && (
                         <div>
                           <strong>Reasons to investigate</strong>
@@ -400,7 +436,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
             })}
             {canSelect && (
               <div className="panel">
-                <button
+                <WalletActionButton requiresWallet={!demo}
                   className="button full"
                   disabled={!!action.busy}
                   onClick={() =>
@@ -419,9 +455,10 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                   }
                 >
                   Confirm {selected.length} exclusive options
-                </button>
+                </WalletActionButton>
               </div>
             )}
+            {revealed && <IndicatorNote />}
             {demo && (
               <p className="fine demo-note">
                 Demo data. Team names, weights and reasons are synthetic.
@@ -429,103 +466,149 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
             )}
           </Frame>
           <Feedback action={action} />
-          {!demo && hasAllocation && (
+          {(demo || hasAllocation) && (
             <Frame>
               <div className="stack">
-                <h3>Record outcomes and evidence</h3>
+                <h3>Mark the most valuable signal</h3>
                 <p>
-                  Deploys are checked by the operator oracle. You may attest a
-                  grant for an option in your allocation during the outcome
-                  window.
+                  Your payment goes to the scouts behind the options you mark.
+                  Mark the team that actually delivered for you, for example
+                  one that took your grant or deployed on your chain.
                 </p>
-                <label className="field">
-                  <span>Option</span>
-                  <select
-                    value={grantOption}
-                    onChange={(e) => setGrantOption(Number(e.target.value))}
-                  >
-                    {(signals?.options ?? []).map((o) => (
-                      <option value={o.index} key={o.index}>
-                        {o.teamRef}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Evidence</span>
-                  <textarea
-                    rows={3}
-                    value={evidence}
-                    onChange={(e) => setEvidence(e.target.value)}
-                    placeholder="Grant reference or evidence URL"
-                  />
-                </label>
-                <div className="row">
-                  <button
-                    className="button"
-                    disabled={
-                      !!action.busy ||
-                      !revealed ||
-                      market.status !== "OutcomeWindow" ||
-                      !evidence.trim()
-                    }
-                    onClick={() =>
-                      action.run(
-                        "Recording your grant attestation",
-                        async () => {
-                          const hash = keccak(utf8(evidence));
-                          const ix = await wallet.program.methods
-                            .recordOutcome(bi, grantOption, 1, Array.from(hash))
-                            .accounts({
-                              signer: wallet.publicKey,
-                              config: P.config(),
-                              market: P.market(market.id),
-                              outcome: P.outcome(
-                                P.market(market.id),
-                                bi,
-                                grantOption,
-                              ),
-                            })
-                            .instruction();
-                          await send(wallet.provider, [ix]);
-                          await refresh();
-                          return "Grant outcome recorded onchain.";
-                        },
-                      )
-                    }
-                  >
-                    Attest grant
-                  </button>
-                  <button
-                    className="button outline"
-                    disabled={
-                      !!action.busy ||
-                      !revealed ||
-                      market.status !== "OutcomeWindow"
-                    }
-                    onClick={() =>
-                      action.run("Checking a Solana deployment", async () => {
-                        const r = await api(
-                          "/outcomes/check",
-                          {
-                            marketId: market.id,
-                            optionIndex: grantOption,
-                            buyerIndex: bi,
-                          },
-                          await token(),
-                        );
-                        return r.found
-                          ? "Deployment found and recorded."
-                          : r.reason || "No matching deployment found.";
-                      })
-                    }
-                  >
-                    Check deployment
-                  </button>
-                </div>
-                <Note title="A payment is not refunded">
-                  If you record no successful option, the default rule rewards
-                  the strongest signal you bought.
+                {demo && (
+                  <p className="fine">
+                    Demo walkthrough. Nothing is recorded and no transaction is
+                    sent.
+                  </p>
+                )}
+                <p className="fine">
+                  {marked.length
+                    ? `Marked so far ${marked.map((i) => teamName(i)).join(", ")}.`
+                    : "You have not marked any option yet."}
+                </p>
+                <ol className="stack" style={{ gap: 14, paddingLeft: 18 }}>
+                  <li>
+                    <label className="field">
+                      <span>Choose the option that was most valuable to you</span>
+                      <select
+                        value={grantOption}
+                        onChange={(e) => setGrantOption(Number(e.target.value))}
+                        disabled={!signals}
+                      >
+                        {!signals && <option>Decrypt your view first</option>}
+                        {(signals?.options ?? []).map((o) => (
+                          <option value={o.index} key={o.index}>
+                            {o.teamRef}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </li>
+                  <li>
+                    <label className="field">
+                      <span>Add evidence, such as a grant reference or link</span>
+                      <textarea
+                        rows={3}
+                        value={evidence}
+                        onChange={(e) => setEvidence(e.target.value)}
+                        placeholder="Grant reference or evidence URL"
+                      />
+                    </label>
+                    <p className="fine" style={{ fontSize: 12 }}>
+                      Only a hash of this text goes onchain. Keep the original,
+                      since the operator may ask for it.
+                    </p>
+                  </li>
+                  <li className="stack" style={{ gap: 8 }}>
+                    <span>
+                      Confirm the mark. Bisik records it onchain as a
+                      separate outcome kind, "Buyer marked most valuable",
+                      so it is never confused with a grant or a deploy.
+                    </span>
+                    <div className="row">
+                      <WalletActionButton requiresWallet={!demo}
+                        className="button"
+                        disabled={
+                          demo ||
+                          !!action.busy ||
+                          !revealed ||
+                          market.status !== "OutcomeWindow" ||
+                          !evidence.trim() ||
+                          marked.includes(grantOption)
+                        }
+                        onClick={() =>
+                          action.run(
+                            "Marking this option as most valuable",
+                            async () => {
+                              const hash = keccak(utf8(evidence));
+                              const ix = await wallet.program.methods
+                                // Outcome kind 3 = buyer marked most valuable (N2).
+                                .recordOutcome(bi, grantOption, 3, Array.from(hash))
+                                .accounts({
+                                  signer: wallet.publicKey,
+                                  config: P.config(),
+                                  market: P.market(market.id),
+                                  outcome: P.outcome(
+                                    P.market(market.id),
+                                    bi,
+                                    grantOption,
+                                  ),
+                                  buyerRecord: P.buyerRecord(wallet.publicKey!),
+                                })
+                                .instruction();
+                              await send(wallet.provider, [ix]);
+                              await refresh();
+                              return `${teamName(grantOption)} is marked. Its scouts share your payment pool.`;
+                            },
+                          )
+                        }
+                      >
+                        {marked.includes(grantOption)
+                          ? "Already marked"
+                          : "Mark as most valuable"}
+                      </WalletActionButton>
+                      <WalletActionButton requiresWallet={!demo}
+                        className="button outline"
+                        disabled={
+                          demo ||
+                          !!action.busy ||
+                          !revealed ||
+                          market.status !== "OutcomeWindow"
+                        }
+                        onClick={() =>
+                          action.run("Checking a Solana deployment", async () => {
+                            const r = await api(
+                              "/outcomes/check",
+                              {
+                                marketId: market.id,
+                                optionIndex: grantOption,
+                                buyerIndex: bi,
+                              },
+                              await token(),
+                            );
+                            await refresh();
+                            return r.found
+                              ? "Deployment found. The operator marked this option for you."
+                              : r.reason || "No matching deployment found.";
+                          })
+                        }
+                      >
+                        Check deployment instead
+                      </WalletActionButton>
+                    </div>
+                    <p className="fine" style={{ fontSize: 12 }}>
+                      If the team deployed on Solana, the operator can confirm it
+                      and mark the option for you. You can mark more than one
+                      option. The pool is then shared by stake weight across all
+                      marked options. A mark cannot be removed.
+                    </p>
+                  </li>
+                </ol>
+                <Note title="If you mark nothing">
+                  When the outcome window ends with no mark, the pool goes to
+                  the strongest signal you bought, meaning the option in your
+                  view with the most stake behind it. Your payment is not
+                  refunded in either case.
                 </Note>
                 <h3>Dispute a verifiable claim</h3>
                 <label className="field">
@@ -557,9 +640,10 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                   The selected claim identifies the backed position. Evidence is
                   sent to the operator for review.
                 </p>
-                <button
+                <WalletActionButton requiresWallet={!demo}
                   className="button outline"
                   disabled={
+                    demo ||
                     !!action.busy ||
                     market.status !== "OutcomeWindow" ||
                     !claimId ||
@@ -584,6 +668,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                           market: P.market(market.id),
                           position: P.position(P.market(market.id), n),
                           dispute: P.dispute(P.market(market.id), n),
+                          buyerRecord: P.buyerRecord(wallet.publicKey!),
                         })
                         .instruction();
                       await send(wallet.provider, [ix]);
@@ -592,7 +677,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                   }
                 >
                   Open hoax dispute
-                </button>
+                </WalletActionButton>
               </div>
             </Frame>
           )}
@@ -601,8 +686,9 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
               <div className="stack">
                 <h3>Ask for an introduction</h3>
                 <p>
-                  The scout may choose to share encrypted contact details with
-                  you.
+                  The scout may choose to share their encrypted contact details
+                  with you and ask the team’s consent for an introduction. The
+                  team does not need a Bisik account.
                 </p>
                 <label className="field">
                   <span>Option in your view</span>
@@ -617,7 +703,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                     ))}
                   </select>
                 </label>
-                <button
+                <WalletActionButton requiresWallet={!demo}
                   className="button outline"
                   disabled={!!action.busy || !revealed}
                   onClick={() =>
@@ -640,7 +726,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                   }
                 >
                   Request introduction
-                </button>
+                </WalletActionButton>
                 <label className="field">
                   <span>Introduction request ID</span>
                   <input
@@ -648,7 +734,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                     onChange={(e) => setIntroId(e.target.value)}
                   />
                 </label>
-                <button
+                <WalletActionButton requiresWallet={!demo}
                   className="button outline"
                   disabled={!introId || !!action.busy}
                   onClick={() =>
@@ -665,7 +751,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                   }
                 >
                   Check scout response
-                </button>
+                </WalletActionButton>
                 {introResponse && (
                   <Note title={introResponse.status}>
                     {introResponse.contactCiphertext
@@ -717,7 +803,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                 inputMode="decimal"
               />
             </label>
-            <button
+            <WalletActionButton requiresWallet={!demo}
               className="button bone full"
               disabled={
                 demo ||
@@ -767,6 +853,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                             payerToken,
                             escrow: P.escrow(m),
                             tokenProgram: TOKEN_PROGRAM_ID,
+                            buyerRecord: P.buyerRecord(wallet.publicKey!),
                           })
                           .instruction(),
                       );
@@ -802,7 +889,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
               }
             >
               Seal and submit bid
-            </button>
+            </WalletActionButton>
             <p>
               Second price with a {amount(market.reservePrice)} USDC reserve.
               Anything above your final price comes back to you.
@@ -815,7 +902,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                 Buy the remaining signals at a flat {amount(market.flatPrice)}{" "}
                 USDC.
               </p>
-              <button
+              <WalletActionButton requiresWallet={!demo}
                 className="button"
                 disabled={
                   demo ||
@@ -846,6 +933,8 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                           payerToken,
                           escrow: P.escrow(m),
                           tokenProgram: TOKEN_PROGRAM_ID,
+                          bid: P.bid(m, wallet.publicKey!),
+                          buyerRecord: P.buyerRecord(wallet.publicKey!),
                         })
                         .instruction(),
                     );
@@ -860,7 +949,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                   : chain?.nextRank === 2
                     ? "Buy remaining signals"
                     : "After allocation"}
-              </button>
+              </WalletActionButton>
             </div>
           </Frame>
           {!demo && wallet.publicKey && (
@@ -881,7 +970,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                       : "Your selection step has finished."}
                   </p>
                 )}
-                <button
+                <WalletActionButton requiresWallet={!demo}
                   className="button outline"
                   disabled={
                     !!action.busy ||
@@ -942,7 +1031,7 @@ export default function Buyer({ demo = false }: { demo?: boolean }) {
                   {bidAccount?.refunded
                     ? "Bid refund completed"
                     : "Claim bid refund"}
-                </button>
+                </WalletActionButton>
               </div>
             </Frame>
           )}

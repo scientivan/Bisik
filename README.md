@@ -31,7 +31,7 @@
 3. **Encrypted aggregation.** MPC folds every position into encrypted per-option weights. Buyers see only a strength histogram before buying.
 4. **Sealed-bid exclusivity.** Buyers deposit a public ceiling and submit encrypted bids. MPC keeps the top 3 and reveals two winners with a generalized second price and a reserve price. Winner #1 hides up to 3 signals, then winner #2 chooses from what is left. Everyone else buys the remainder at a flat price.
 5. **Veritas** (internal module). Reasons are scored for duplication (D) and AI-likelihood (A), with `DRS = 1 − (1 − D)(1 − A)`. Veritas also splits verifiable claims from opinions and rewrites the reason to remove what could identify the scout. Scores are flags, never grounds for slashing.
-6. **Outcome and settlement.** A success is a deploy on the buyer's chain or a grant from the buyer. MPC reveals only per-buyer denominators and per-position hit bits; payouts are computed onchain. Scouts receive 80% of each buyer's payment (85% when no opted-in team takes its 5%), and the platform 15%.
+6. **Outcome and settlement.** A success is a deploy on the buyer's chain or a grant from the buyer. MPC reveals only per-buyer denominators and per-position hit bits; payouts are computed onchain. Scouts receive 85% of each buyer's payment, and the platform 15%. Teams receive no automatic share and need no account to be proposed. Deploy-wallet registration is only for outcome verification, with team consent and ownership confirmed. The revised rule is active on devnet after the 12 October upgrade (slot 510110372); previously settled payouts remain recorded. See [upgrade verification](docs/devnet-upgrade-2026-10-12.md).
 7. **Claim.** The scout claims stake plus payout to **any fresh address** by proving ownership of the position's nullifier with a new Semaphore proof.
 
 ## Repository
@@ -89,7 +89,7 @@ These are deliberate v1 trade-offs, disclosed rather than hidden:
 1. **Verifier:** the Bisik server sees the GitHub username briefly while verifying the zkTLS proof, then stores only a salted hash.
 2. **Veritas:** the operator's Veritas service reads plaintext reasons in order to score and filter them. A TEE is planned for v2.
 3. **Disputes:** hoax disputes are decided by the operator in v1.
-4. **Outcomes:** Solana deploys are attested by the operator's oracle; grants are attested by the buyer.
+4. **Outcomes:** Solana deploys are attested by the operator's oracle; grants are attested by the buyer. `record_outcome` accepts only those two signers, and every record keeps its signer and an evidence hash onchain (shown on the Operator page under Outcome oracle). There is no open oracle network yet. Planned next: the program checks Solana deployments itself, and subjective outcomes and hoax disputes go to randomly drawn, staked verifiers who vote in secret and are paid or slashed by consensus (living document §18.3).
 5. **Arcium:** MPC trust rests on the Arcium node operators (devnet cluster 456).
 6. **Signal view:** the API's per-option scores and reasons are assembled by the server from public position weights and the reasons it holds, because the server knows which option each reason backs (see 2). Independently of the server, each buyer can also get MPC-computed weights encrypted to their own x25519 key (`reveal_signals`, live on devnet) and decrypt them client-side.
 7. **Stake amounts** per position are public, because USDC transfers are public. *Which team* a position supports stays encrypted.
