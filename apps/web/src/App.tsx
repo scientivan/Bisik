@@ -9,6 +9,7 @@ import {
 import { ThemeProvider } from "./lib/theme";
 import { WalletProvider } from "./lib/wallet";
 import { Header, Note } from "./components/ui";
+import { useIsOperator } from "./components/roles";
 import { WalletPicker } from "./components/wallet-picker";
 import { usePageMotion } from "./lib/motion";
 import Landing from "./pages/Landing";
@@ -41,6 +42,14 @@ class Boundary extends Component<{ children: ReactNode }, { error: string }> {
       this.props.children
     );
   }
+}
+/** Other wallets see a plain note instead of operator tools; nothing here grants onchain rights. */
+function OperatorOnly({ children }: { children: ReactNode }) {
+  return useIsOperator() ? <>{children}</> : (
+    <Note title="This page is not available">
+      Operator tools are limited to the Bisik operator wallet. <Link to="/markets">Browse signals</Link>
+    </Note>
+  );
 }
 function Content() {
   const location = useLocation(),
@@ -84,7 +93,7 @@ function Content() {
             <Route path="/scout/positions" element={<Positions />} />
             <Route path="/buyer/markets/:id" element={<Buyer />} />
             <Route path="/create" element={<Create />} />
-            <Route path="/admin" element={<Admin />} />
+            <Route path="/admin" element={<OperatorOnly><Admin /></OperatorOnly>} />
             <Route path="/demo" element={<Buyer demo />} />
             <Route path="/guide" element={<Guide />} />
             <Route path="/buyer/bids" element={<MyBids />} />

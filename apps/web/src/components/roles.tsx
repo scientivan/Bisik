@@ -1,5 +1,12 @@
 import { Link, NavLink, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
+import { useWallet } from "../lib/wallet";
+
+/** The Operator workspace is hidden from everyone except this wallet (Dien, 13 Oct 2026). */
+export const OPERATOR_WALLET = "BCdn3EvSPE8TpdSDuHKfBdZkznvWfRZWgUhS5VWi1ai7";
+export function useIsOperator() {
+  return useWallet().publicKey?.toBase58() === OPERATOR_WALLET;
+}
 
 /** Every app page belongs to one role, so a visitor always knows whose job they are looking at. */
 export type Role = "buyer" | "scout" | "operator";
@@ -76,9 +83,10 @@ function RoleIcon({ role }: { role: Role }) {
 /** Role selection changes the workspace, never the wallet's permissions. */
 export function RoleTabs() {
   const role = roleOf(useLocation().pathname);
+  const operator = useIsOperator();
   return (
     <nav className="role-switch" aria-label="Use Bisik as">
-      {ROLES.map((r) => (
+      {ROLES.filter((r) => r.id !== "operator" || operator).map((r) => (
         <Link key={r.id} to={r.home} className={r.id === role ? "active" : ""} aria-current={r.id === role ? "true" : undefined} title={`${r.label}: ${r.action}`}>
           <RoleIcon role={r.id} />
           <span>{r.label}<span className="visually-hidden">, {r.action}</span></span>
