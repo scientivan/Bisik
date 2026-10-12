@@ -986,6 +986,8 @@ Hanya ditambah, jangan dihapus. Format: `waktu WIB · siapa · apa · bukti/path
 
 - 2026-10-13 01:xx WIB · agent · Atas persetujuan Dien: commit a5a3cc5 sebagai titik pemulihan; e2e MPC localnet (`arcium test --skip-build`) lulus termasuk assertion BuyerRecord dan penolakan auction oleh creator tak terverifikasi; devnet di-extend 100.000 byte lalu di-upgrade ke binary SHA-256 `7db4a4e3…19171` pada slot 510358648, tx `58bEe5FxsNujGwG31iRgHT7BfT1ePSRMkFz6g8fkc8N1gxFaeXWUks22wSFRR2Fdy8LfPKVqD5ahV8tUbTwRHD1T`. Upload pertama gagal (Max retries exceeded); buffer dilanjutkan dengan `resume-devnet-buffer.ts` lalu difinalisasi. Bytecode live identik; 11 market tetap terbaca. Server utama dan build web produksi perlu dijalankan ulang/di-deploy dengan IDL baru. Detail `docs/devnet-upgrade-2026-10-13.md`
 
+- 2026-10-13 · Dien + agent · Server sudah berjalan dengan kode baru (direstart sesi video 01:21, setelah SDK/IDL baru); tidak direstart ulang. Uji aturan baru di devnet: simulasi auction tanpa profil ditolak 6018 (`lib.rs:228`); wallet FRTMLy9 (buyer terverifikasi) membuka auction #11, tx `4NBro68z3dLJFmzYuay6mKWfRfqtQzaE36q6xS9vRsWHP9iqustYLn8TQVWnP5TZWn2xsPFTSB7aTRWVCnKviVwh`, buyerCount 0, marketsJoined 0, MPC init siap, pertanyaan berlabel (DEMO). Tab dan halaman Operator hanya untuk wallet `BCdn3EvSPE8TpdSDuHKfBdZkznvWfRZWgUhS5VWi1ai7` (commit 50b3f86). Keputusan Dien: web produksi tidak di-deploy; demo dari localhost, submit dengan repo + video. Akun Vercel blacknwhite03 boleh dipakai bila nanti deploy
+
 ## 16. Cara memperbarui dokumen ini
 
 1. **Saat mulai mengerjakan task:** ubah `[ ]` menjadi `[~]`.
