@@ -46,6 +46,7 @@ Closest comparisons: Bench (Arcium), Scout Game, Talent Protocol, Retro9000/Meti
 - Split of each buyer payment: 85% scouts, 15% platform. Teams receive no automatic payment.
 - Scouts may propose a team without its having a Bisik account. The Team page is deferred. Request team consent for an introduction and consent plus wallet ownership evidence when a buyer needs deployment verification; wallet registration confers no payment rights.
 - Devnet upgraded on 12 October 2026 (slot 510110372): the 85/15 split is active and automatic team payments are disabled. Previously settled positions retain their recorded payouts. See `docs/devnet-upgrade-2026-10-12.md`.
+- Market creation (13 Oct 2026, replaces D-02): any wallet opens an exclusive market and funds its pool; only a verified buyer opens an auction round, and the creator bids like everyone else. Onchain buyer reputation lives in `BuyerRecord`; the buyer's "most valuable" mark is outcome kind 3. Live on devnet since slot 510358648.
 - Outcome oracle: in v1 only the buyer or the operator can record an outcome, and each record keeps its signer and evidence hash. An open network of staked, randomly drawn verifiers with secret votes and consensus rewards/slashing is the next step (task N4, living document §18.3); never present it as live.
 - Payout honesty: a buyer's payment is not refunded. If the buyer marks no successful option, the pool goes to the strongest signal they bought (D-05). Never claim "paid only if the team ships".
 - Deadline: Colosseum submission 13 Oct 2026 13:59 WIB.

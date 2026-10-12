@@ -28,6 +28,21 @@
 - Untuk demo teknis: "Judges are particularly interested in the reasoning behind these decisions".
 - Juri mencari "early traction, conversations with potential users", dan feedback "even if informal".
 
+**Panduan resmi pitch vs demo.** [Fakta, blog workshop Colosseum, dicek ulang 13 Okt 2026]
+
+- Pembagian peran: "the pitch video is for explaining the why, the technical demo is about the how." Pitch menjelaskan kenapa produk ini dibuat. Demo menjelaskan cara produk bekerja.
+- Isi demo yang boleh: "gameplay footage, interface walkthroughs, or architecture visuals". Tunjukkan fitur inti dan jelaskan tech stack.
+- Yang dicari juri di demo: "Judges are particularly interested in the reasoning behind these decisions", terutama soal integrasi Solana.
+- Nada demo: "technical, direct, and specific to implementation".
+- Dua kesalahan demo yang disebut: "turning this into another pitch" dan "Failing to explain Solana integration clearly".
+- Untuk pitch: "A clear and well-structured narrative is more valuable than professional video editing". Hindari juga "overly flashy visuals with little substance".
+- Syarat durasi demo dari FAQ: "no more than three minutes". Bahasa, format file, dan hosting video tidak disebut di FAQ.
+
+**Akibatnya untuk produksi video** [Inferensi]:
+
+- Batas 3 menit itu keras. Langkah MPC yang lambat dipotong atau dipercepat, dan bagian yang dipercepat disebut di video.
+- Motion graphics (Remotion) dipakai untuk hal yang sulit terlihat di layar app: arsitektur, alur ZK + MPC, dan alasan teknis. Bagian lain memakai rekaman app yang berjalan sungguhan sebagai bukti Functionality.
+
 **Akibatnya** [Inferensi]:
 
 1. **Video pitch** dibuka dengan **pengguna dan masalah**, bukan produk.
@@ -185,6 +200,13 @@ Urutannya mengikuti alur F0–F10. Setiap ketukan harus menunjukkan **bukti tekn
 3. Fee verifier diambil dari bagian platform.
 
 **Batas yang jujur disebut** [Inferensi]: voting mayoritas rentan menjadi suara populer, semua bisa ikut jawaban yang paling jelas, dan insider info tidak bisa dicek rekan (memo 109). Karena itu jaringan verifier dipakai untuk pertanyaan yang buktinya bisa diperiksa publik, bukan untuk menilai mutu opini scout.
+
+### 5.2 Perubahan program 13 Oktober yang boleh ditunjukkan [Fakta, devnet slot 510358648]
+
+- **Auction round dibuka pembeli terverifikasi**, bukan operator. Pembuat round menawar seperti pembeli lain; pembeli yang tidak butuh eksklusivitas ikut lewat harga rata (patungan). Wallet yang belum diverifikasi ditolak (`NotEligibleBuyer` 6018).
+- **Reputasi pembeli onchain** (`BuyerRecord`): market yang diikuti, hasil yang dicatat, laporan yang terlewat (aturan default), sengketa dibuka/diterima/ditolak. Tampil di profil pembeli yang dibaca scout sebelum menerima permintaan perkenalan.
+- **Tanda "most valuable"** tercatat sebagai jenis hasil sendiri (kind 3), terpisah dari grant.
+- Jangan klaim penghitung reputasi sudah memuat riwayat lama: penghitung onchain mulai dari nol saat upgrade; profil menampilkan nilai terbesar antara penghitung onchain dan hitungan akun lama.
 
 **Kalau ada cadangan yang dipakai** (bagian 12 task tracker), misalnya demo di localnet, lelang commit-reveal, atau agregasi oleh operator: **sebut di video**, jangan disamarkan.
 
