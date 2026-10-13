@@ -11,6 +11,7 @@
 | Program (devnet) | [`aFNfbxfgBuQ6tr5qXDpTmTWrQ8hjLGYNEtdp2L7HjvD`](https://explorer.solana.com/address/aFNfbxfgBuQ6tr5qXDpTmTWrQ8hjLGYNEtdp2L7HjvD?cluster=devnet) |
 | Compiled circuits | [`scientivan/bisik-circuits`](https://github.com/scientivan/bisik-circuits) (pinned by commit; each file is hash-checked by the Arx nodes) |
 | Demo USDC | a mock 6-decimal mint created by the seed script (demo only) |
+| Web app | https://bisik.scientivan.dev (live market data needs the API server running; see "Run it") |
 | Pitch video | https://youtu.be/Fuf4JJXD1mQ |
 | Product demo video | https://youtu.be/QBAEB8aVygA |
 
