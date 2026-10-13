@@ -5,6 +5,7 @@ Bisik is a private signal market where ecosystems (Solana, Base, Arbitrum, Tempo
 ## Source of truth
 
 - **Build plan, interface spec, task status, progress log:** `task-tracker.md`. Start here in every new session.
+- **Demo and pitch video work (design, script, Remotion in `my-video/`):** read `important_for_demo.md` first, every session. It holds the judging rules for the videos and the product facts that must be said in them.
 - Product spec (living document): `../Ideation-Colosseum/living-doc/builder-sourcing-living-doc.md`. Read it before any product decision.
 - Dependency test results: `../Ideation-Colosseum/ideation/114-uji-tiga-dependensi.md`.
 - Cross-session knowledge base: `../AGENTS.md`.

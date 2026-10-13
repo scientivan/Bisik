@@ -25,7 +25,8 @@ export interface Chain {
 
 export function solanaChain(rpcUrl: string, keypairPath: string, scanRpcUrl = rpcUrl): Chain {
   const operator = Keypair.fromSecretKey(new Uint8Array(JSON.parse(readFileSync(keypairPath, "utf8"))));
-  const conn = new Connection(rpcUrl, "confirmed");
+  // Some RPC plans (Alchemy free tier) lack signatureSubscribe; SOLANA_WS_URL points confirmations elsewhere.
+  const conn = new Connection(rpcUrl, { commitment: "confirmed", wsEndpoint: process.env.SOLANA_WS_URL || undefined });
   const provider = makeProvider(conn, operator);
   const program: any = mkProgram(provider);
   // Separate read-only program for getProgramAccounts scans, so the main RPC can be a plan without them.

@@ -1,0 +1,13 @@
+node_modules
+dist
+.DS_Store
+.env
+
+# Ignore the output video from Git but not videos you import into src/.
+out
+
+# Large or third-party media (re-record with scripts/record-demo.ts)
+public/rec/
+screen-record-reference.mov
+.claude/
+.agents/

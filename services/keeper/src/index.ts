@@ -21,7 +21,8 @@ const INTERVAL = Number(process.env.KEEPER_INTERVAL_MS ?? 5000);
 const kpPath = (process.env.OPERATOR_KEYPAIR_PATH ?? "~/.config/solana/id.json").replace(/^~(?=\/)/, homedir());
 
 const operator = Keypair.fromSecretKey(new Uint8Array(JSON.parse(process.env.OPERATOR_KEYPAIR_JSON ?? readFileSync(kpPath, "utf8"))));
-const conn = new Connection(RPC, "confirmed");
+// SOLANA_WS_URL: confirmation socket for RPC plans without signatureSubscribe (Alchemy free tier).
+const conn = new Connection(RPC, { commitment: "confirmed", wsEndpoint: process.env.SOLANA_WS_URL || undefined });
 const provider = makeProvider(conn, operator);
 const program: any = mkProgram(provider);
 // getProgramAccounts scans go to a separate RPC when the main plan does not allow them (for example Alchemy free tier).
@@ -234,6 +235,8 @@ async function tick() {
   const markets = await scan.account.market.all();
   let pendingCredits = false;
   for (const { publicKey, account } of markets) {
+    // KEEPER_MIN_MARKET skips older markets (saves scan RPC quota during demos).
+    if (Number(account.id) < Number(process.env.KEEPER_MIN_MARKET ?? 0)) continue;
     if (account.status === Status.Settled) {
       if (!account.feesWithdrawn && (account.pools as any[]).some((x) => Number(x) > 0)) {
         try {

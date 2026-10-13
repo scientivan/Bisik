@@ -2,10 +2,13 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useWallet } from "../lib/wallet";
 
-/** The Operator workspace is hidden from everyone except this wallet (Dien, 13 Oct 2026). */
+/** The Operator workspace is hidden from everyone except these wallets (Dien, 13 Oct 2026):
+ * Dien's wallet, and the onchain `config.operator` key that the server accepts for operator actions. */
 export const OPERATOR_WALLET = "BCdn3EvSPE8TpdSDuHKfBdZkznvWfRZWgUhS5VWi1ai7";
+export const OPERATOR_WALLETS = [OPERATOR_WALLET, "FRTMLy9suBCQYGya341V4urVedMJXFg21dDw4CTn43Ke"];
 export function useIsOperator() {
-  return useWallet().publicKey?.toBase58() === OPERATOR_WALLET;
+  const me = useWallet().publicKey?.toBase58();
+  return !!me && OPERATOR_WALLETS.includes(me);
 }
 
 /** Every app page belongs to one role, so a visitor always knows whose job they are looking at. */

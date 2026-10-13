@@ -4,7 +4,7 @@
 
 *Bisik* is Indonesian for "whisper". Insiders (hackathon judges, mentors, developers) quietly flag promising teams that have not yet committed to a chain. Ecosystems buy those signals, can bid for exclusivity, and pay the insiders **according to outcomes**: a buyer's payment goes to the scouts behind the teams that shipped on the buyer's chain or won its grant (if the buyer reports none, a default rule picks the strongest signal they bought).
 
-> Status: hackathon build for the Colosseum Crypto World's Fair (Solana track). The on-chain program, MPC circuits, ZK identity, Veritas module, API server and keeper are implemented. The end-to-end test passes on the Arcium localnet, and the program runs on **Solana devnet with Arcium MPC (cluster 456, Arcium 0.15.0)**. The Sonogram frontend is implemented; Chrome browser create/stake/reveal/claim passes on devnet. Real GitHub onboarding and Safari acceptance remain pending.
+> Status: hackathon build for the Colosseum Crypto World's Fair (Solana track). The on-chain program, MPC circuits, ZK identity, Veritas module, API server and keeper are implemented. The end-to-end test passes on the Arcium localnet, and the program runs on **Solana devnet with Arcium MPC (cluster 456, Arcium 0.15.0)**. The web app is implemented; Chrome browser create/stake/reveal/claim passes on devnet. Real GitHub onboarding and Safari acceptance remain pending.
 
 | | |
 |---|---|
@@ -47,7 +47,9 @@
 | `apps/web` | Vite + React Sonogram frontend, Wallet Standard, browser ZK stake/claim, buyer and operator flows |
 | `apps/server` | API: Reclaim verifier, group service, reasons and Veritas, signals, outcome oracle |
 | `services/keeper` | Lifecycle worker (close, preview, resolve, settle, reputation credit) |
-| `scripts/` | Verification-key generation, demo seeding |
+| `scripts/` | Verification-key generation, demo seeding, demo screen recorder (`record-demo.ts`) |
+| `my-video` | Remotion projects for the submission videos: product demo (`Demo`) and pitch (`Pitch`) |
+| `docs/brand` | Product logo (SVG and PNG exports) |
 
 ## Run it
 
