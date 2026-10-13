@@ -308,3 +308,7 @@ Dark is the default theme for every visitor. Light applies only after the visito
 The scout "Get verified" tab is gone. Unverified scouts can read any market; pressing stake or add team sends them to `/scout/onboard?next=…`, which offers a Continue button back once they are verified. The profile keeps its own Get verified entry.
 
 Market data no longer polls on timers. The server keeps markets in memory, rebuilds them when a confirmed program transaction appears (log subscription on the scan RPC, with a two-minute safety refresh), and pushes a data version over `/v1/events`. Pages remember the last response for instant rendering and refetch only when the version changes.
+
+## Scout positions packaging · 13 October 2026
+
+`/scout/positions` follows the profile rhythm: saved/ready/claimed summaries, a three-stage stake → settlement → claim diagram, and a wide call list with supporting claim settings on the right. Each call has paired stake/reward values and a next-action sentence; nullifiers and recovery live in native disclosures. Status counts remain unavailable until all saved positions load. Empty states lead to markets or identity restoration. Mobile stacks calls before settings, without an internally scrolling list. Existing claim, recovery, introduction and dispute handlers are preserved. Typecheck and Chrome desktop/mobile layout/disclosure checks passed; this is not a rerun of wallet transactions.

@@ -16,7 +16,8 @@ import {
 } from "../lib/storage";
 import { amount, remaining } from "../lib/amounts";
 import { useAction } from "../lib/hooks";
-import { Feedback, Frame, Note, PageTitle, Pill, WalletActionButton } from "../components/ui";
+import { Feedback, Frame, Note, Icon, Pill, WalletActionButton } from "../components/ui";
+import { InfoTip } from "../components/info-tip";
 import { Steps } from "../components/roles";
 import { proving } from "./Stake";
 /** A dispute on one of this device's positions. Onchain fields are null until the buyer opens it onchain. */
@@ -161,19 +162,35 @@ export default function Positions() {
       slot: r.slot,
     };
   }
+  const ready = records.filter((r) => { const s = states[key(r)]; return s?.settled && !s.claimed && !s.slashed; }).length;
+  const claimed = records.filter((r) => states[key(r)]?.claimed).length;
+  const loaded = records.filter((r) => states[key(r)]).length;
   return (
-    <>
-      <PageTitle title="Your calls, your claims.">
-        Position records stay on this device. Claim to an address you choose
-        after settlement.
-      </PageTitle>
+    <div className="profile positions-page">
+      <div className="profile-head">
+        <div><h1>Your stakes and rewards</h1><p>Follow your calls from stake to settlement, then claim.</p></div>
+        <span className="status-line"><Pill state="sealed">Saved on this device</Pill><InfoTip title="Your private records" align="end">Your identity and position records live in this browser. Export a backup to keep access to your claims.</InfoTip></span>
+      </div>
 
       <Steps role="scout" at={2} />
+      <div className="stat-grid positions-summary">
+        <div className="stat-card"><span className="stat-label">Saved calls</span><span className="stat-value">{records.length}</span><div className="position-mini"><Icon name="lock" /><span>{new Set(records.map((r) => r.marketId)).size} markets · up to 3 calls each</span></div><p>Your picks stay private. These records let you prove ownership.</p></div>
+        <div className="stat-card"><span className="stat-label">Ready to claim <InfoTip title="When you can claim">A position must be settled, unclaimed and not slashed. Connect a wallet to check its onchain status.</InfoTip></span><span className="stat-value">{wallet.program && loaded === records.length ? ready : "—"}</span><div className="position-mini"><Icon name="clock" /><span>{loaded} of {records.length} statuses loaded</span></div><p>{ready ? "Choose a recipient below, then claim from each ready call." : "Stake returns and rewards become available after settlement."}</p></div>
+        <div className="stat-card"><span className="stat-label">Claimed</span><span className="stat-value">{wallet.program && loaded === records.length ? claimed : "—"}</span><div className="seg-wrap"><div className="seg-bar" role="img" aria-label={`${claimed} of ${records.length} saved calls claimed`}>{claimed > 0 && <span className="seg good" style={{flex: claimed}} />}{records.length - claimed > 0 ? <span className="seg muted" style={{flex: records.length - claimed}} /> : !claimed && <span className="seg none" />}</div><div className="seg-legend"><span><i className="dot good" />Collected</span><span><i className="dot muted" />Not collected</span></div></div><p>Claims send mock USDC to the recipient address you choose.</p></div>
+      </div>
+      <section className="position-journey" aria-label="From call to claim">
+        <div><Icon name="lock" /><span><strong>Stake a call</strong><small>Back your insight privately</small></span></div>
+        <Icon name="arrow" />
+        <div><Icon name="clock" /><span><strong>Wait for settlement</strong><small>Outcome and payout are recorded</small></span></div>
+        <Icon name="arrow" />
+        <div><Icon name="check" /><span><strong>Claim to your address</strong><small>Stake return + any reward</small></span></div>
+      </section>
       <div className="positions-layout">
-        <div className="stack">
+        <div className="stack positions-tools">
+          <div className="record-head"><h2>Claim settings</h2></div>
           <Frame>
             <div className="stack">
-              <h3>Claim destination</h3>
+              <div className="record-head"><h3>Where to send your claim</h3><InfoTip title="Transaction fees" align="end">The connected wallet pays transaction fees. Mock USDC is sent to the recipient’s token account. A recipient address is public, and funding relationships may still be traceable.</InfoTip></div>
               <label className="field">
                 <span>Recipient Solana address</span>
                 <input
@@ -182,10 +199,7 @@ export default function Positions() {
                   placeholder="A fresh address you control"
                 />
               </label>
-              <p className="fine">
-                The connected wallet pays transaction fees. Mock USDC is sent to
-                the recipient’s token account.
-              </p>
+              <p className="fine">Use a fresh address you control for your stake return and reward.</p>
               <button
                 className="button outline"
                 onClick={() =>
@@ -201,7 +215,8 @@ export default function Positions() {
               </button>
             </div>
           </Frame>
-          <Frame>
+          <details className="position-recovery">
+            <summary>Missing a call? Recover positions</summary>
             <div className="stack">
               <h3>Recover a market’s positions</h3>
               <p>
@@ -273,19 +288,17 @@ export default function Positions() {
                 Recover positions
               </WalletActionButton>
             </div>
-          </Frame>
+          </details>
         </div>
         <div className="stack positions-list">
+          <div className="row between"><h2>Your calls</h2><Link className="position-text-link" to="/scout">Browse markets <Icon name="arrow" /></Link></div>
           {!scout && (
         <Note title="Restore your private identity">
           <Link to="/scout/onboard">Open scout onboarding</Link>
         </Note>
       )}
           {!records.length && (
-            <Note title="No positions saved on this device">
-              Stake in an open market or recover positions using your identity
-              and a market ID.
-            </Note>
+            <section className="position-empty"><span className="position-empty-mark"><Icon name="lock" /></span><h3>Your first call starts with an insight</h3><p>Back a team in an open market. Its stake and claim status will appear here.</p><Link className="button" to="/scout">Find an open market <Icon name="arrow" /></Link><p className="fine">Already staked elsewhere? Restore your identity, then use “Recover positions”.</p></section>
           )}
           {records.map((r) => {
             const state = states[key(r)];
@@ -296,7 +309,7 @@ export default function Positions() {
                     <h3>
                       Market {r.marketId} · slot {r.slot}
                     </h3>
-                    <Pill state={state?.claimed ? "public" : "sealed"}>
+                    <Pill state={state?.settled && !state.claimed && !state.slashed ? "yours" : state?.claimed ? "public" : "sealed"}>
                       {!state
                         ? "Not found or not loaded"
                         : state.claimed
@@ -308,7 +321,7 @@ export default function Positions() {
                               : "Awaiting settlement"}
                     </Pill>
                   </div>
-                  <div className="list-row">
+                  <div className="position-amounts"><div className="list-row">
                     <span>Stake</span>
                     <strong>
                       {state ? `${amount(state.amount)} USDC` : "Not loaded yet"}
@@ -322,7 +335,9 @@ export default function Positions() {
                         : "After settlement"}
                     </strong>
                   </div>
-                  <div className="row">
+                  </div>
+                  <p className="position-next"><Icon name={state?.claimed ? "check" : "clock"} />{!state ? "Connect your wallet to check this call’s status." : state.claimed ? "Claim collected. You can still review the market." : state.slashed ? "Hoax upheld. This stake is not available to claim." : state.settled ? recipient.trim() ? "Ready. Claim your stake and reward below." : "Ready. Add a recipient in Claim settings to continue." : "Waiting for settlement. No claim action is needed yet."}</p>
+                  <div className="row position-actions">
                     <Link
                       className="button small outline"
                       to={`/markets/${r.marketId}`}
@@ -428,7 +443,7 @@ export default function Positions() {
                       Respond by dispute ID
                     </button>
                   </div>
-                  <p className="fine details">Nullifier {r.nullifier}</p>
+                  <details className="position-technical"><summary>Position details</summary><p className="fine details">Nullifier {r.nullifier}</p></details>
                 </div>
               </Frame>
             );
@@ -571,10 +586,7 @@ export default function Positions() {
               </div>
             </Frame>
           )}
-          <Note dark title="Your identity unlocks the claim">
-            Keep your private backup. A recipient address is public, and funding
-            relationships may still be traceable.
-          </Note>
+
           {picked && (
             <Frame>
               <div className="stack">
@@ -695,6 +707,7 @@ export default function Positions() {
           )}
         </aside>
       </div>
-    </>
+      <div className="note-card"><Icon name="info" /><p><strong>Keep your private backup.</strong> Your identity unlocks your claims. Wrong calls are not slashed; only a proven hoax sends the stake to charity.</p></div>
+    </div>
   );
 }
