@@ -28,7 +28,7 @@ Public configuration:
 
 The program address is pinned by the SDK IDL. The mock mint and limits are read from onchain config/market accounts; the app does not mint tokens. Public RPCs may rate-limit rapid automated flows. Real wallets need devnet SOL and the configured mock USDC.
 
-Vercel project root must be `apps/web`, build command `pnpm build`, output `dist`. Set a public HTTPS `VITE_API_URL` at build time and its matching Reclaim callback URL on the server. `vercel.json` supports direct navigation to nested routes. The production `/api` path is not a hosted backend. Deployment remains task I1.
+Vercel supports either project root: `apps/web` uses `pnpm build` and output `dist`; the repository root uses `pnpm --filter @bisik/web build` and output `apps/web/dist`. Both roots have a versioned `vercel.json` declaring the Vite framework, build command and output directory, so deployment does not rely on the dashboard default `public`. Set a public HTTPS `VITE_API_URL` at build time and its matching Reclaim callback URL on the server. `vercel.json` supports direct navigation to nested routes. The production `/api` path is not a hosted backend. Deployment remains task I1.
 
 ## Routes and implemented behavior
 
